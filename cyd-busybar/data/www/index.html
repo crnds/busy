@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CYD BUSY</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <h1>CYD BUSY</h1>
+        <p class="sub" id="conn-line">connecting</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab is-on" data-tab="draw" type="button">Draw</button>
+      <button class="tab" data-tab="themes" type="button">Themes</button>
+      <button class="tab" data-tab="device" type="button">Device</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="preview-block">
+      <div class="preview-frame">
+        <div class="led-stage">
+          <p class="led-cap">Front 72×16</p>
+          <canvas id="front" width="72" height="16" aria-label="Front display preview"></canvas>
+        </div>
+        <div class="led-stage">
+          <p class="led-cap">Back 160×80</p>
+          <canvas id="back" width="160" height="80" aria-label="Back display preview"></canvas>
+        </div>
+      </div>
+      <p class="hint" id="preview-status">Live preview ~2 fps from /api/screen</p>
+    </section>
+
+    <section id="panel-draw" class="panel">
+      <h2>Draw elements</h2>
+      <form id="draw-form" class="draw-form">
+        <label>Application
+          <input name="application_name" value="web" maxlength="32" required>
+        </label>
+        <label>Priority
+          <input name="priority" type="number" min="1" max="100" value="50">
+        </label>
+        <label>LED notify
+          <input name="led" type="color" value="#F4620E">
+        </label>
+        <label>Type
+          <select name="type" id="el-type">
+            <option value="text">text</option>
+            <option value="countdown">countdown</option>
+            <option value="rectangle">rectangle</option>
+            <option value="xpmbitmap">xpmbitmap</option>
+          </select>
+        </label>
+        <label>Display
+          <select name="display">
+            <option value="front">front</option>
+            <option value="back">back</option>
+          </select>
+        </label>
+        <label>Align
+          <select name="align">
+            <option value="top_left">top_left</option>
+            <option value="center">center</option>
+            <option value="top_mid">top_mid</option>
+            <option value="bottom_mid">bottom_mid</option>
+          </select>
+        </label>
+        <label>X <input name="x" type="number" value="2"></label>
+        <label>Y <input name="y" type="number" value="4"></label>
+        <label>Timeout (s) <input name="timeout" type="number" min="0" value="0"></label>
+        <label class="span-2">Text
+          <input name="text" value="HELLO BUSY" maxlength="96">
+        </label>
+        <label>Font
+          <select name="font">
+            <option>tiny</option>
+            <option>small</option>
+            <option selected>normal</option>
+            <option>condensed</option>
+            <option>bold</option>
+            <option>large</option>
+            <option>extra_large</option>
+            <option>global</option>
+          </select>
+        </label>
+        <label>Color <input name="color" type="color" value="#FFFFFF"></label>
+        <label>Width (scroll) <input name="width" type="number" min="0" value="72"></label>
+        <label>Scroll rate <input name="scroll_rate" type="number" min="0" value="800"></label>
+        <label>Countdown unix <input name="timestamp" placeholder="seconds"></label>
+        <label>Direction
+          <select name="direction">
+            <option value="time_left">time_left</option>
+            <option value="time_since">time_since</option>
+          </select>
+        </label>
+        <div class="actions span-2">
+          <button type="submit">POST /api/display/draw</button>
+          <button type="button" id="btn-clear" class="ghost">Clear canvas</button>
+        </div>
+      </form>
+      <p class="hint" id="draw-msg"></p>
+    </section>
+
+    <section id="panel-themes" class="panel is-hidden">
+      <h2>Status themes</h2>
+      <div class="theme-grid" id="theme-grid"></div>
+    </section>
+
+    <section id="panel-device" class="panel is-hidden">
+      <h2>Device</h2>
+      <form id="device-form" class="device-form">
+        <label>Brightness
+          <select name="brightness_mode" id="br-mode">
+            <option value="auto">auto (LDR)</option>
+            <option value="manual">manual</option>
+          </select>
+        </label>
+        <label>Manual %
+          <input name="brightness" id="br-val" type="range" min="5" max="100" value="80">
+        </label>
+        <label>Clock
+          <select name="hour12" id="hour12">
+            <option value="true">12-hour</option>
+            <option value="false">24-hour</option>
+          </select>
+        </label>
+        <label>Timezone
+          <select name="tz_name" id="tz"></select>
+        </label>
+        <label class="span-2">API token (blank = open)
+          <input name="api_token" type="password" autocomplete="off" placeholder="optional">
+        </label>
+        <div class="actions span-2">
+          <button type="submit">Save</button>
+        </div>
+      </form>
+      <pre class="status-dump" id="status-dump">loading status</pre>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

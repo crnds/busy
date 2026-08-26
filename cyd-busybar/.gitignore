@@ -1,0 +1,8 @@
+.pio
+.vscode
+.clangd
+compile_commands.json
+*.bin
+*.elf
+*.map
+.DS_Store

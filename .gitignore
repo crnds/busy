@@ -1,0 +1,12 @@
+# Upstream BUSY Bar firmware is a read-only reference clone, not this project.
+busybar-firmware/
+
+# PlatformIO build output
+**/.pio/
+.vscode/
+.clangd
+compile_commands.json
+*.bin
+*.elf
+*.map
+.DS_Store

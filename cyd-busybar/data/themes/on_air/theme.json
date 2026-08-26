@@ -1,0 +1,10 @@
+{
+  "label": "ON AIR",
+  "color": "#FF2A2AFF",
+  "text_color": "#FFFFFFFF",
+  "front_text": "ON AIR",
+  "back_title": "ON AIR",
+  "back_sub": "RECORDING",
+  "order": 100,
+  "anim": "pulse_bars"
+}

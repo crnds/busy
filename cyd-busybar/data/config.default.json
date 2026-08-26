@@ -1,0 +1,15 @@
+{
+  "wifi_ssid": "",
+  "wifi_pass": "",
+  "tz_name": "Bangkok",
+  "tz": "ICT-7",
+  "hour12": true,
+  "show_seconds": true,
+  "blink_colons": true,
+  "show_date": true,
+  "brightness_mode": "auto",
+  "brightness": 80,
+  "theme": "on_air",
+  "api_token": "",
+  "rotation": 1
+}
