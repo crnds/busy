@@ -1,9 +1,9 @@
 {
-  "label": "ON AIR",
+  "label": "BUSY",
   "color": "#FF2A2AFF",
   "text_color": "#FFFFFFFF",
-  "front_text": "ON AIR",
-  "back_title": "ON AIR",
+  "front_text": "BUSY",
+  "back_title": "BUSY",
   "back_sub": "RECORDING",
   "order": 100,
   "anim": "pulse_bars"

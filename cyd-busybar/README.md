@@ -17,7 +17,13 @@ Landscape 320×240:
 | Back | 320×160 (160×80 × 2) | BUSY Bar back clone + tabs |
 
 Tabs along the bottom of the back display: **CLK / STAT / APP / SET**.
-Swipe left/right on Status to change themes (ON AIR, MEETING, DND, CODING, LUNCH).
+Swipe left/right on Status to change themes (BUSY, MEETING, DND, CODING, LUNCH).
+
+## Simulator
+
+Open `simulator.html` in a browser (no board required). It is a pixel twin of
+the 320x240 firmware UI: same 5x7 font, layout, tabs, themes, and draw overlay.
+Click the screen like the resistive panel, or use keys 1-4 / arrows / Enter / Esc.
 
 ## Build / flash
 

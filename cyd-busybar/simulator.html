@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cyd-busybar simulator</title>
+<style>
+:root {
+  --bg: #08090d;
+  --surface: #0f1117;
+  --surface-alt: #161b27;
+  --border: rgba(255,255,255,0.08);
+  --text: #f1f5f9;
+  --text2: #94a3b8;
+  --muted: #64748b;
+  --accent: #F4620E;
+  --good: #22c55e;
+  --warn: #f43f5e;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  min-height: 100dvh;
+  padding: 24px;
+}
+header { margin-bottom: 20px; max-width: 920px; }
+header h1 { font-size: 20px; font-weight: 600; }
+header p { color: var(--text2); font-size: 13px; margin-top: 4px; line-height: 1.45; }
+.layout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 768px) { .layout { grid-template-columns: 1fr; } }
+
+.device {
+  background: linear-gradient(145deg, #4a4110, #2e2806);
+  border-radius: 16px;
+  padding: 18px 20px 16px;
+  box-shadow: var(--shadow);
+  display: inline-block;
+}
+.bezel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.brand {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+}
+.rgb-led {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #111;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+}
+.screen-wrap { position: relative; border: 3px solid #111; border-radius: 4px; overflow: hidden; }
+#screen {
+  display: block;
+  width: 640px;
+  height: 480px;
+  background: #000;
+  cursor: pointer;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+  user-select: none;
+}
+.dim-overlay {
+  position: absolute; inset: 0; background: #000; pointer-events: none;
+}
+.device-label {
+  text-align: center;
+  color: rgba(255,255,255,0.35);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  margin-top: 10px;
+  text-transform: uppercase;
+}
+.hint { color: #7a6a10; font-size: 11px; text-align: center; margin-top: 8px; }
+
+.panel { display: flex; flex-direction: column; gap: 14px; max-width: 640px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.card h2 {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--text2);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+label { font-size: 13px; color: var(--text2); }
+input[type=text], input[type=number], input[type=color], select, textarea {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+}
+input[type=text], textarea { flex: 1; min-width: 140px; }
+input:focus, select:focus, button:focus, textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+button:hover { background: rgba(255,255,255,0.08); }
+button:active { transform: translateY(1px); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover { filter: brightness(1.08); }
+button.is-on { border-color: var(--accent); color: var(--accent); }
+.toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text2); cursor: pointer; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.theme-card {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  text-align: left;
+  color: var(--text);
+}
+.theme-card.is-on { border-color: var(--accent); }
+#log {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  height: 120px;
+  overflow: auto;
+  font: 11px/1.45 ui-monospace, Menlo, monospace;
+  color: var(--text2);
+}
+#log .err { color: var(--warn); }
+#hud { font-size: 12px; color: var(--text2); font-variant-numeric: tabular-nums; line-height: 1.6; }
+#hud b { color: var(--text); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>cyd-busybar simulator</h1>
+  <p>Pixel twin of the ESP32-2432S028R firmware: 320&times;240 landscape, front 72&times;16 &times;4, back 160&times;80 &times;2, 16px status bar. Click the screen like the resistive panel. Same 5&times;7 font and coordinates as <code>src/</code>.</p>
+</header>
+
+<main class="layout">
+  <section class="device" aria-label="Simulated CYD">
+    <div class="bezel-row">
+      <div class="brand">CYD 2.8 · ESP32-2432S028R</div>
+      <div class="rgb-led" id="rgbLed" title="onboard RGB LED"></div>
+    </div>
+    <div class="screen-wrap">
+      <canvas id="screen" width="320" height="240" aria-label="Simulated 320 by 240 display"></canvas>
+      <div class="dim-overlay" id="dimOverlay"></div>
+    </div>
+    <div class="device-label">tabs CLK / STAT / APP / SET · swipe themes</div>
+    <p class="hint">click tabs · swipe left/right · keys 1-4 enter esc arrows</p>
+  </section>
+
+  <section class="panel">
+    <div class="card">
+      <h2>App</h2>
+      <div class="row" id="app-btns">
+        <button type="button" data-key="start">CLK</button>
+        <button type="button" data-key="busy">STAT</button>
+        <button type="button" data-key="apps">APP</button>
+        <button type="button" data-key="settings">SET</button>
+        <button type="button" data-key="ok">OK</button>
+        <button type="button" data-key="back">Back</button>
+      </div>
+      <p id="hud"></p>
+    </div>
+
+    <div class="card">
+      <h2>Status themes</h2>
+      <div class="theme-grid" id="theme-grid"></div>
+    </div>
+
+    <div class="card">
+      <h2>Clock / brightness</h2>
+      <div class="row">
+        <label class="toggle"><input type="checkbox" id="hour12" checked> 12-hour</label>
+        <label class="toggle"><input type="checkbox" id="showSeconds" checked> seconds</label>
+        <label class="toggle"><input type="checkbox" id="blinkColons" checked> blink colons</label>
+        <label class="toggle"><input type="checkbox" id="simOffline"> NTP not synced</label>
+      </div>
+      <div class="row">
+        <label for="bright">Brightness</label>
+        <input id="bright" type="range" min="5" max="100" value="80">
+        <span id="brightVal">80%</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>POST /api/display/draw</h2>
+      <form id="draw-form">
+        <div class="row">
+          <input name="text" type="text" value="HELLO BUSY" maxlength="96" aria-label="Text">
+          <select name="font" aria-label="Font">
+            <option>tiny</option><option>small</option>
+            <option selected>normal</option><option>condensed</option>
+            <option>bold</option><option>large</option>
+            <option>extra_large</option><option>global</option>
+          </select>
+          <select name="display" aria-label="Display">
+            <option value="front">front</option>
+            <option value="back">back</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>X <input name="x" type="number" value="2" style="width:70px"></label>
+          <label>Y <input name="y" type="number" value="4" style="width:70px"></label>
+          <label>Width <input name="width" type="number" value="72" style="width:70px"></label>
+          <input name="color" type="color" value="#ffffff" aria-label="Color">
+          <button class="primary" type="submit">Draw text</button>
+          <button type="button" id="btn-clear">Clear canvas</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Log</h2>
+      <div id="log"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+// Pixel twin of cyd-busybar firmware. Layout, 5x7 bits, and draw
+// coordinates must match src/ (Types.h, Fonts.cpp, ClockApp, ThemeApp,
+// SettingsApp, Chrome, AppManager, DisplayHAL, TouchInput).
+
+// ── LAYOUT (Types.h) ──────────────────────────────────────
+const FRONT_W = 72, FRONT_H = 16, BACK_W = 160, BACK_H = 80;
+const TFT_W = 320, TFT_H = 240, STATUS_H = 16;
+const FRONT_SCALE = 4, BACK_SCALE = 2;
+const FRONT_DX = 16, FRONT_DY = 16, BACK_DX = 0, BACK_DY = 80;
+const FW_NAME = 'cyd-busybar', FW_VERSION = '0.1.0', API_SEMVER = '27.5.0';
+const STORAGE_KEY = 'cydbusybar_v1_sim';
+
+const COL_BG = 0x0000, COL_STATUS = 0x0841, COL_TEXT = 0xFFFF;
+const COL_MUTED = 0x7BEF, COL_ACCENT = 0xFBE0, COL_GREEN = 0x07E0, COL_RED = 0xF800;
+
+const FontId = { Tiny:0, Small:1, Normal:2, Condensed:3, Bold:4, Large:5, ExtraLarge:6, Global:7 };
+const AppId = { Clock:0, Theme:1, Apps:2, Settings:3 };
+const Key = { None:0, Up:1, Down:2, Ok:3, Back:4, Start:5, Busy:6, Custom:7, Off:8, Apps:9, Settings:10 };
+const Align = { TopLeft:0, TopMid:1, TopRight:2, MidLeft:3, Center:4, MidRight:5, BottomLeft:6, BottomMid:7, BottomRight:8 };
+
+const TZ_TABLE = [
+  'Bangkok','UTC','London','Berlin','New_York','Chicago','Denver',
+  'Los_Angeles','Tokyo','Singapore','Sydney','Mumbai'
+];
+
+const THEMES = [
+  { id:'on_air',  label:'BUSY',    backSub:'RECORDING',     color: rgb565(0xFF,0x2A,0x2A), bg: rgb565(0x28,0x00,0x00), anim:'pulse_bars' },
+  { id:'meeting', label:'MEETING', backSub:'IN A CALL',     color: rgb565(0x3D,0x7F,0xFF), bg: rgb565(0x00,0x10,0x28), anim:'dots' },
+  { id:'dnd',     label:'DND',     backSub:'DO NOT DISTURB',color: rgb565(0xB0,0x80,0xFF), bg: rgb565(0x10,0x00,0x20), anim:'moon' },
+  { id:'coding',  label:'CODING',  backSub:'HEADS DOWN',    color: rgb565(0x22,0xC5,0x5E), bg: rgb565(0x00,0x18,0x08), anim:'code' },
+  { id:'lunch',   label:'LUNCH',   backSub:'BACK SOON',     color: rgb565(0xF4,0xC2,0x0E), bg: rgb565(0x28,0x18,0x00), anim:'utensils' },
+];
+
+const FONT5X7 = [
+  [0x00, 0x00, 0x00, 0x00, 0x00],
+  [0x00, 0x00, 0x2F, 0x00, 0x00],
+  [0x00, 0x03, 0x00, 0x03, 0x00],
+  [0x0A, 0x1F, 0x0A, 0x1F, 0x0A],
+  [0x24, 0x2A, 0x7F, 0x2A, 0x12],
+  [0x63, 0x13, 0x28, 0x66, 0x41],
+  [0x36, 0x49, 0x55, 0x22, 0x50],
+  [0x00, 0x00, 0x03, 0x00, 0x00],
+  [0x00, 0x00, 0x3E, 0x41, 0x00],
+  [0x00, 0x41, 0x3E, 0x00, 0x00],
+  [0x14, 0x08, 0x3E, 0x08, 0x14],
+  [0x08, 0x08, 0x3E, 0x08, 0x08],
+  [0x00, 0x40, 0x30, 0x00, 0x00],
+  [0x08, 0x08, 0x08, 0x08, 0x08],
+  [0x00, 0x00, 0x20, 0x00, 0x00],
+  [0x10, 0x08, 0x04, 0x02, 0x01],
+  [0x3E, 0x51, 0x49, 0x45, 0x3E],
+  [0x00, 0x42, 0x7F, 0x40, 0x00],
+  [0x42, 0x61, 0x51, 0x49, 0x46],
+  [0x22, 0x41, 0x49, 0x49, 0x36],
+  [0x18, 0x14, 0x12, 0x7F, 0x10],
+  [0x27, 0x45, 0x45, 0x45, 0x39],
+  [0x3E, 0x49, 0x49, 0x49, 0x30],
+  [0x01, 0x71, 0x09, 0x05, 0x03],
+  [0x36, 0x49, 0x49, 0x49, 0x36],
+  [0x06, 0x49, 0x49, 0x49, 0x3E],
+  [0x00, 0x00, 0x12, 0x00, 0x00],
+  [0x00, 0x40, 0x32, 0x00, 0x00],
+  [0x08, 0x14, 0x22, 0x41, 0x00],
+  [0x14, 0x14, 0x14, 0x14, 0x14],
+  [0x00, 0x41, 0x22, 0x14, 0x08],
+  [0x02, 0x01, 0x51, 0x09, 0x06],
+  [0x3E, 0x41, 0x5D, 0x55, 0x5E],
+  [0x7E, 0x09, 0x09, 0x09, 0x7E],
+  [0x7F, 0x49, 0x49, 0x49, 0x36],
+  [0x3E, 0x41, 0x41, 0x41, 0x22],
+  [0x7F, 0x41, 0x41, 0x41, 0x3E],
+  [0x7F, 0x49, 0x49, 0x49, 0x41],
+  [0x7F, 0x09, 0x09, 0x09, 0x01],
+  [0x3E, 0x41, 0x49, 0x49, 0x7A],
+  [0x7F, 0x08, 0x08, 0x08, 0x7F],
+  [0x00, 0x41, 0x7F, 0x41, 0x00],
+  [0x20, 0x40, 0x41, 0x3F, 0x01],
+  [0x7F, 0x08, 0x14, 0x22, 0x41],
+  [0x7F, 0x40, 0x40, 0x40, 0x40],
+  [0x7F, 0x02, 0x0C, 0x02, 0x7F],
+  [0x7F, 0x02, 0x04, 0x08, 0x7F],
+  [0x3E, 0x41, 0x41, 0x41, 0x3E],
+  [0x7F, 0x09, 0x09, 0x09, 0x06],
+  [0x3E, 0x41, 0x51, 0x21, 0x5E],
+  [0x7F, 0x09, 0x19, 0x29, 0x46],
+  [0x46, 0x49, 0x49, 0x49, 0x31],
+  [0x01, 0x01, 0x7F, 0x01, 0x01],
+  [0x3F, 0x40, 0x40, 0x40, 0x3F],
+  [0x1F, 0x20, 0x40, 0x20, 0x1F],
+  [0x7F, 0x20, 0x18, 0x20, 0x7F],
+  [0x63, 0x14, 0x08, 0x14, 0x63],
+  [0x03, 0x04, 0x78, 0x04, 0x03],
+  [0x61, 0x51, 0x49, 0x45, 0x43],
+  [0x7F, 0x41, 0x41, 0x41, 0x00],
+  [0x01, 0x02, 0x04, 0x08, 0x10],
+  [0x00, 0x41, 0x41, 0x41, 0x7F],
+  [0x04, 0x02, 0x01, 0x02, 0x04],
+  [0x40, 0x40, 0x40, 0x40, 0x40],
+  [0x00, 0x01, 0x02, 0x00, 0x00],
+  [0x20, 0x54, 0x54, 0x54, 0x78],
+  [0x7F, 0x44, 0x44, 0x44, 0x38],
+  [0x38, 0x44, 0x44, 0x44, 0x00],
+  [0x38, 0x44, 0x44, 0x44, 0x7F],
+  [0x38, 0x54, 0x54, 0x54, 0x18],
+  [0x08, 0x7E, 0x09, 0x01, 0x02],
+  [0x08, 0x54, 0x54, 0x54, 0x3C],
+  [0x7F, 0x04, 0x04, 0x04, 0x78],
+  [0x00, 0x44, 0x7D, 0x40, 0x00],
+  [0x20, 0x40, 0x44, 0x3D, 0x00],
+  [0x7F, 0x10, 0x28, 0x44, 0x00],
+  [0x00, 0x41, 0x7F, 0x40, 0x00],
+  [0x7C, 0x04, 0x78, 0x04, 0x78],
+  [0x7C, 0x04, 0x04, 0x04, 0x78],
+  [0x38, 0x44, 0x44, 0x44, 0x38],
+  [0x7C, 0x14, 0x14, 0x14, 0x08],
+  [0x08, 0x14, 0x14, 0x14, 0x7C],
+  [0x7C, 0x08, 0x04, 0x04, 0x08],
+  [0x48, 0x54, 0x54, 0x54, 0x24],
+  [0x04, 0x3F, 0x44, 0x44, 0x20],
+  [0x3C, 0x40, 0x40, 0x40, 0x7C],
+  [0x1C, 0x20, 0x40, 0x20, 0x1C],
+  [0x3C, 0x40, 0x38, 0x40, 0x3C],
+  [0x44, 0x28, 0x10, 0x28, 0x44],
+  [0x0C, 0x50, 0x50, 0x50, 0x3C],
+  [0x44, 0x64, 0x54, 0x4C, 0x44],
+  [0x00, 0x08, 0x36, 0x41, 0x41],
+  [0x00, 0x00, 0x7F, 0x00, 0x00],
+  [0x41, 0x41, 0x36, 0x08, 0x00],
+  [0x08, 0x04, 0x08, 0x10, 0x08],
+];
+
+function rgb565(r, g, b) { return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3); }
+function split565(c) {
+  let r = (c >> 8) & 0xF8; r |= r >> 5;
+  let g = (c >> 3) & 0xFC; g |= g >> 6;
+  let b = (c << 3) & 0xF8; b |= b >> 5;
+  return [r, g, b];
+}
+function clampi(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+function parseFont(s) {
+  const m = { tiny:0, small:1, condensed:3, bold:4, large:5, extra_large:6, global:7 };
+  return m[s] != null ? m[s] : FontId.Normal;
+}
+function parseAlign(s) {
+  const m = { top_mid:1, top_right:2, mid_left:3, center:4, mid_right:5, bottom_left:6, bottom_mid:7, bottom_right:8 };
+  return m[s] != null ? m[s] : Align.TopLeft;
+}
+function applyAlign(x, y, w, h, a) {
+  switch (a) {
+    case Align.TopMid: x -= (w / 2) | 0; break;
+    case Align.TopRight: x -= w; break;
+    case Align.MidLeft: y -= (h / 2) | 0; break;
+    case Align.Center: x -= (w / 2) | 0; y -= (h / 2) | 0; break;
+    case Align.MidRight: x -= w; y -= (h / 2) | 0; break;
+    case Align.BottomLeft: y -= h; break;
+    case Align.BottomMid: x -= (w / 2) | 0; y -= h; break;
+    case Align.BottomRight: x -= w; y -= h; break;
+  }
+  return [x, y];
+}
+function hex8to565(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return rgb565(r, g, b);
+}
+
+// ── STATE ─────────────────────────────────────────────────
+const STATE = {
+  current: AppId.Clock,
+  pending: AppId.Clock,
+  wiping: false,
+  wipeStart: 0,
+  wipeX: -1,
+  settingsIndex: 0,
+  settingsLeaf: false,
+  themeIndex: 0,
+  hour12: true,
+  showSeconds: true,
+  blinkColons: true,
+  showDate: true,
+  tzIndex: 0,
+  brightness: 80,
+  wifiOn: true,
+  rssi: -50,
+  ip: '192.168.1.42',
+  ssid: 'home',
+  ntpReady: true,
+  canvas: null,
+  rgb: [0, 0, 0],
+  blinkUntil: 0,
+  blinkOn: false,
+  blinkLast: 0,
+};
+
+try {
+  const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  if (s.hour12 != null) STATE.hour12 = s.hour12;
+  if (s.themeIndex != null) STATE.themeIndex = s.themeIndex;
+  if (s.brightness != null) STATE.brightness = s.brightness;
+} catch (e) {}
+
+function saveSettings() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    hour12: STATE.hour12, themeIndex: STATE.themeIndex, brightness: STATE.brightness
+  }));
+}
+
+function millis() { return Date.now(); }
+
+// ── DISPLAY HAL ───────────────────────────────────────────
+const front = new Uint16Array(FRONT_W * FRONT_H);
+const back = new Uint16Array(BACK_W * BACK_H);
+const canvasEl = document.getElementById('screen');
+const ctx = canvasEl.getContext('2d', { alpha: false });
+ctx.imageSmoothingEnabled = false;
+const img = ctx.createImageData(TFT_W, TFT_H);
+
+function dispW(d) { return d === 0 ? FRONT_W : BACK_W; }
+function dispH(d) { return d === 0 ? FRONT_H : BACK_H; }
+function dispBuf(d) { return d === 0 ? front : back; }
+
+function clearFB(d, color) {
+  dispBuf(d).fill(color);
+}
+function pixel(d, x, y, color) {
+  const w = dispW(d), h = dispH(d);
+  if (x < 0 || y < 0 || x >= w || y >= h) return;
+  dispBuf(d)[y * w + x] = color;
+}
+function fillRect(d, x, y, w, h, color) {
+  const W = dispW(d), H = dispH(d);
+  const x1 = clampi(x, 0, W), y1 = clampi(y, 0, H);
+  const x2 = clampi(x + w, 0, W), y2 = clampi(y + h, 0, H);
+  const buf = dispBuf(d);
+  for (let yy = y1; yy < y2; yy++) {
+    const row = yy * W;
+    for (let xx = x1; xx < x2; xx++) buf[row + xx] = color;
+  }
+}
+function hLine(d, x, y, w, c) { fillRect(d, x, y, w, 1, c); }
+function vLine(d, x, y, h, c) { fillRect(d, x, y, 1, h, c); }
+
+function put565(x, y, c) {
+  if (x < 0 || y < 0 || x >= TFT_W || y >= TFT_H) return;
+  const [r, g, b] = split565(c);
+  const i = (y * TFT_W + x) * 4;
+  img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b; img.data[i + 3] = 255;
+}
+function fillTft(x, y, w, h, c) {
+  for (let yy = y; yy < y + h; yy++)
+    for (let xx = x; xx < x + w; xx++) put565(xx, yy, c);
+}
+function scaleBlit(src, sw, sh, dx, dy, scale) {
+  for (let sy = 0; sy < sh; sy++) {
+    for (let sx = 0; sx < sw; sx++) {
+      const c = src[sy * sw + sx];
+      const px = dx + sx * scale;
+      const py = dy + sy * scale;
+      for (let k = 0; k < scale; k++)
+        for (let m = 0; m < scale; m++) put565(px + k, py + m, c);
+    }
+  }
+}
+
+function glyphW(id) {
+  switch (id) {
+    case FontId.Tiny: return 3;
+    case FontId.Small: return 4;
+    case FontId.Condensed: return 4;
+    case FontId.Large: return 6;
+    case FontId.ExtraLarge: return 7;
+    case FontId.Global: return 8;
+    default: return 5;
+  }
+}
+function glyphH(id) {
+  switch (id) {
+    case FontId.Tiny:
+    case FontId.Small: return 5;
+    case FontId.Large: return 9;
+    case FontId.ExtraLarge: return 10;
+    case FontId.Global: return 11;
+    default: return 7;
+  }
+}
+function textWidth(s, id) {
+  if (!s) return 0;
+  const n = s.length;
+  return n * glyphW(id) + (n - 1);
+}
+function textHeight(id) { return glyphH(id); }
+
+function blitGlyph(d, x, y, ch, color, id, clipX, clipY, clipW, clipH, clip) {
+  let idx = ch.charCodeAt(0);
+  if (idx < 0x20 || idx > 0x7E) idx = 63;
+  const cols = FONT5X7[idx - 0x20];
+  const dw = glyphW(id), dh = glyphH(id);
+  const bold = id === FontId.Bold;
+  const W = dispW(d), H = dispH(d);
+  for (let dy = 0; dy < dh; dy++) {
+    // Inclusive 5x7 sample (Fonts.cpp). Tiny/Small keep the glyph midline.
+    let sy = dh <= 1 ? 0 : Math.floor((dy * 6 + Math.floor((dh - 1) / 2)) / (dh - 1));
+    if (sy > 6) sy = 6;
+    const py = y + dy;
+    if (py < 0 || py >= H) continue;
+    if (clip && (py < clipY || py >= clipY + clipH)) continue;
+    for (let dx = 0; dx < dw; dx++) {
+      let sx = dw <= 1 ? 0 : Math.floor((dx * 4 + Math.floor((dw - 1) / 2)) / (dw - 1));
+      if (sx > 4) sx = 4;
+      const px = x + dx;
+      if (px < 0 || px >= W) continue;
+      if (clip && (px < clipX || px >= clipX + clipW)) continue;
+      let on = (cols[sx] & (1 << sy)) !== 0;
+      if (bold && sx + 1 < 5) on = on || ((cols[sx + 1] & (1 << sy)) !== 0);
+      if (on) pixel(d, px, py, color);
+    }
+  }
+}
+function drawText(d, x, y, s, color, id) {
+  if (!s) return;
+  const adv = glyphW(id) + 1;
+  for (let i = 0; i < s.length; i++) {
+    blitGlyph(d, x, y, s[i], color, id, 0, 0, 0, 0, false);
+    x += adv;
+  }
+}
+function drawTextClip(d, clipX, clipY, clipW, clipH, originX, s, color, id) {
+  if (!s) return;
+  const adv = glyphW(id) + 1;
+  let x = originX;
+  for (let i = 0; i < s.length; i++) {
+    blitGlyph(d, x, clipY, s[i], color, id, clipX, clipY, clipW, clipH, true);
+    x += adv;
+  }
+}
+
+// TFT GLCD twin: 5x7 in a 6x8 cell (Adafruit / TFT_eSPI font 1).
+function tftGlyph(x, y, ch, color) {
+  let idx = ch.charCodeAt(0);
+  if (idx < 0x20 || idx > 0x7E) idx = 63;
+  const cols = FONT5X7[idx - 0x20];
+  for (let sx = 0; sx < 5; sx++)
+    for (let sy = 0; sy < 7; sy++)
+      if (cols[sx] & (1 << sy)) put565(x + sx, y + sy, color);
+}
+function tftPrint(x, y, s, color) {
+  for (let i = 0; i < s.length; i++) {
+    tftGlyph(x, y, s[i], color);
+    x += 6;
+  }
+  return s.length * 6;
+}
+function drawIconWifi(tftX, tftY, bars, color) {
+  const p = (x, y) => put565(tftX + x, tftY + y, color);
+  p(3, 6); p(4, 6); p(3, 7); p(4, 7);
+  if (bars >= 1) { p(2, 5); p(5, 5); p(3, 4); p(4, 4); }
+  if (bars >= 2) { p(1, 3); p(6, 3); p(2, 2); p(5, 2); }
+  if (bars >= 3) { p(0, 1); p(7, 1); p(1, 0); p(6, 0); p(2, 0); p(5, 0); p(3, 0); p(4, 0); }
+}
+
+function setRgb(r, g, b) {
+  STATE.rgb = [r, g, b];
+  const el = document.getElementById('rgbLed');
+  if (r || g || b) {
+    el.style.background = `rgb(${r},${g},${b})`;
+    el.style.boxShadow = `0 0 10px rgb(${r},${g},${b})`;
+  } else {
+    el.style.background = '#111';
+    el.style.boxShadow = 'inset 0 0 0 1px rgba(255,255,255,0.15)';
+  }
+}
+function rgbOff() { STATE.blinkUntil = 0; setRgb(0, 0, 0); }
+function blinkRgb(c, ms) {
+  const [r, g, b] = split565(c);
+  STATE.rgb = [r, g, b];
+  STATE.blinkUntil = millis() + ms;
+  STATE.blinkLast = 0;
+  STATE.blinkOn = false;
+}
+
+function drawStatusBar() {
+  fillTft(0, 0, TFT_W, STATUS_H, COL_STATUS);
+  let bars = 0;
+  if (STATE.wifiOn) {
+    if (STATE.rssi > -55) bars = 3;
+    else if (STATE.rssi > -70) bars = 2;
+    else bars = 1;
+  }
+  drawIconWifi(4, 4, bars, STATE.wifiOn ? COL_GREEN : COL_MUTED);
+  const mid = formatClock(false, true, false);
+  tftPrint(20, 4, mid, COL_TEXT);
+  const left = STATE.wifiOn ? STATE.ip : 'offline';
+  const tw = left.length * 6;
+  tftPrint(TFT_W - 4 - tw, 4, left, COL_MUTED);
+}
+
+function composite() {
+  img.data.fill(0);
+  for (let i = 3; i < img.data.length; i += 4) img.data[i] = 255;
+  drawStatusBar();
+  scaleBlit(front, FRONT_W, FRONT_H, FRONT_DX, FRONT_DY, FRONT_SCALE);
+  scaleBlit(back, BACK_W, BACK_H, BACK_DX, BACK_DY, BACK_SCALE);
+  if (STATE.wipeX >= 0) fillTft(STATE.wipeX, 0, 14, TFT_H, COL_ACCENT);
+  ctx.putImageData(img, 0, 0);
+}
+
+// ── TIME ──────────────────────────────────────────────────
+function localTm() { return new Date(); }
+function pad2(n) { return n < 10 ? '0' + n : String(n); }
+function formatClock(hour12, seconds, blinkColon) {
+  if (!STATE.ntpReady) return seconds ? '--:--:--' : '--:--';
+  const t = localTm();
+  let hour = t.getHours();
+  const colon = blinkColon && (Math.floor(millis() / 500) % 2) ? ' ' : ':';
+  if (hour12) {
+    let h = hour % 12; if (h === 0) h = 12;
+    return seconds ? `${h}${colon}${pad2(t.getMinutes())}${colon}${pad2(t.getSeconds())}`
+                   : `${h}${colon}${pad2(t.getMinutes())}`;
+  }
+  return seconds ? `${pad2(hour)}${colon}${pad2(t.getMinutes())}${colon}${pad2(t.getSeconds())}`
+                 : `${pad2(hour)}${colon}${pad2(t.getMinutes())}`;
+}
+function formatDate() {
+  const wday = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const t = localTm();
+  return `${wday[t.getDay()]} ${t.getDate()} ${mon[t.getMonth()]}`;
+}
+function formatIso() {
+  const t = localTm();
+  return `${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())}T${pad2(t.getHours())}:${pad2(t.getMinutes())}:${pad2(t.getSeconds())}+07:00`;
+}
+
+// ── CLOCK APP ─────────────────────────────────────────────
+function drawCalendar(x, y, day) {
+  fillRect(0, x, y, 13, 14, COL_TEXT);
+  fillRect(0, x + 1, y + 3, 11, 10, rgb565(0x20, 0x20, 0x28));
+  fillRect(0, x + 1, y, 11, 3, COL_RED);
+  const buf = String(day);
+  const tw = textWidth(buf, FontId.Tiny);
+  drawText(0, x + Math.floor((13 - tw) / 2), y + 5, buf, COL_TEXT, FontId.Tiny);
+}
+function drawClock() {
+  clearFB(0, COL_BG); clearFB(1, COL_BG);
+  const t = localTm();
+  const ready = STATE.ntpReady;
+  let clock = formatClock(STATE.hour12, STATE.showSeconds, STATE.blinkColons);
+  if (!ready) clock = '--:--';
+  if (STATE.showDate) drawCalendar(1, 1, ready ? t.getDate() : 0);
+  const f = STATE.showSeconds ? FontId.Bold : FontId.ExtraLarge;
+  const tw = textWidth(clock, f);
+  const th = textHeight(f);
+  const x = STATE.showDate ? 16 : Math.floor((FRONT_W - tw) / 2);
+  const y = Math.floor((FRONT_H - th) / 2);
+  drawText(0, x, y, clock, COL_TEXT, f);
+  if (STATE.hour12 && ready) {
+    const mer = t.getHours() >= 12 ? 'PM' : 'AM';
+    drawText(0, x + tw + 2, y + 2, mer, COL_MUTED, FontId.Tiny);
+  }
+  drawText(1, 4, 4, 'CLOCK', COL_MUTED, FontId.Small);
+  let big = formatClock(STATE.hour12, false, STATE.blinkColons);
+  if (!ready) big = '--:--';
+  const bw = textWidth(big, FontId.Global);
+  drawText(1, Math.floor((BACK_W - bw) / 2), 22, big, COL_TEXT, FontId.Global);
+  if (STATE.hour12 && ready) {
+    const mer = t.getHours() >= 12 ? 'PM' : 'AM';
+    drawText(1, Math.floor((BACK_W - bw) / 2) + bw + 3, 26, mer, COL_MUTED, FontId.Small);
+  }
+  const date = ready ? formatDate() : 'syncing NTP...';
+  const dw = textWidth(date, FontId.Normal);
+  drawText(1, Math.floor((BACK_W - dw) / 2), 42, date, COL_MUTED, FontId.Normal);
+}
+
+// ── THEMES ────────────────────────────────────────────────
+function currentTheme() { return THEMES[STATE.themeIndex]; }
+function animPulseBars(t) {
+  clearFB(0, t.bg);
+  const frame = Math.floor(millis() / 80) % 8;
+  for (let i = 0; i < 4; i++) {
+    let h = 4 + ((frame + i * 2) % 8);
+    if (h > 14) h = 14;
+    fillRect(0, 2 + i * 3, FRONT_H - 1 - h, 2, h, t.color);
+    fillRect(0, FRONT_W - 4 - i * 3, FRONT_H - 1 - h, 2, h, t.color);
+  }
+  const tw = textWidth(t.label, FontId.Bold);
+  drawText(0, Math.floor((FRONT_W - tw) / 2), 4, t.label, COL_TEXT, FontId.Bold);
+}
+function animDots(t) {
+  clearFB(0, t.bg);
+  const tw = textWidth(t.label, FontId.Bold);
+  drawText(0, 2, 4, t.label, COL_TEXT, FontId.Bold);
+  const n = 1 + Math.floor(millis() / 400) % 3;
+  for (let i = 0; i < n; i++) fillRect(0, 4 + tw + 4 + i * 5, 8, 2, 2, t.color);
+}
+function animMoon(t) {
+  clearFB(0, t.bg);
+  const cx = 10, cy = 8, r = 5;
+  for (let y = -r; y <= r; y++)
+    for (let x = -r; x <= r; x++)
+      if (x * x + y * y <= r * r) pixel(0, cx + x, cy + y, t.color);
+  const ox = 3 - (Math.floor(millis() / 80) % 5);
+  for (let y = -4; y <= 4; y++)
+    for (let x = -4; x <= 4; x++)
+      if (x * x + y * y <= 16) pixel(0, cx + ox + x, cy + y - 1, t.bg);
+  drawText(0, 20, 4, t.label, COL_TEXT, FontId.Bold);
+}
+function animCode(t) {
+  clearFB(0, t.bg);
+  const bits = ['{ }', '</>', 'fn()', '=>', 'ok;'];
+  const i = Math.floor(millis() / 350) % 5;
+  drawText(0, 2, 1, bits[i], t.color, FontId.Small);
+  const tw = textWidth(t.label, FontId.Bold);
+  drawText(0, FRONT_W - tw - 2, 8, t.label, COL_TEXT, FontId.Bold);
+}
+function animUtensils(t) {
+  clearFB(0, t.bg);
+  vLine(0, 6, 2, 12, t.color);
+  vLine(0, 4, 2, 5, t.color);
+  vLine(0, 8, 2, 5, t.color);
+  hLine(0, 4, 7, 5, t.color);
+  vLine(0, 14, 2, 12, COL_MUTED);
+  fillRect(0, 13, 2, 3, 6, COL_TEXT);
+  const tw = textWidth(t.label, FontId.Bold);
+  drawText(0, FRONT_W - tw - 2, 4, t.label, COL_TEXT, FontId.Bold);
+}
+function drawTheme() {
+  const t = currentTheme();
+  if (t.anim === 'pulse_bars') animPulseBars(t);
+  else if (t.anim === 'dots') animDots(t);
+  else if (t.anim === 'moon') animMoon(t);
+  else if (t.anim === 'code') animCode(t);
+  else animUtensils(t);
+  clearFB(1, t.bg);
+  drawText(1, 4, 4, 'STATUS', COL_MUTED, FontId.Small);
+  const tw = textWidth(t.label, FontId.Global);
+  drawText(1, Math.floor((BACK_W - tw) / 2), 20, t.label, t.color, FontId.Global);
+  const sw = textWidth(t.backSub, FontId.Normal);
+  drawText(1, Math.floor((BACK_W - sw) / 2), 38, t.backSub, COL_TEXT, FontId.Normal);
+  drawText(1, 8, 54, '< prev', COL_MUTED, FontId.Tiny);
+  drawText(1, BACK_W - 40, 54, 'next >', COL_MUTED, FontId.Tiny);
+  const [r, g, b] = split565(t.color);
+  setRgb(r, g, b);
+}
+
+// ── APPS / SETTINGS / CHROME ──────────────────────────────
+function drawAppsScreen() {
+  clearFB(0, COL_BG); clearFB(1, COL_BG);
+  drawText(0, 4, 4, 'APPS', COL_ACCENT, FontId.Bold);
+  drawText(1, 4, 4, 'APPS', COL_MUTED, FontId.Small);
+  const line = STATE.wifiOn ? `http://${STATE.ip}/` : 'offline';
+  drawText(1, 4, 18, line, COL_TEXT, FontId.Tiny);
+  drawText(1, 4, 30, 'cyd-busybar.local', COL_MUTED, FontId.Small);
+  if (STATE.canvas) drawText(1, 4, 44, `canvas: ${STATE.canvas.app} p${STATE.canvas.priority}`, COL_ACCENT, FontId.Tiny);
+  else drawText(1, 4, 44, 'canvas: idle', COL_ACCENT, FontId.Tiny);
+  drawText(1, 4, 54, 'POST /api/display/draw', COL_MUTED, FontId.Tiny);
+}
+
+const SET_ROWS = ['Wi-Fi', 'Time', 'Brightness', 'About'];
+function drawSettings() {
+  if (!STATE.settingsLeaf) {
+    clearFB(0, COL_BG); clearFB(1, COL_BG);
+    drawText(0, 4, 4, 'SETTINGS', COL_ACCENT, FontId.Bold);
+    drawText(1, 4, 3, 'SETTINGS', COL_MUTED, FontId.Small);
+    for (let i = 0; i < SET_ROWS.length; i++) {
+      const y = 16 + i * 12;
+      if (i === STATE.settingsIndex) fillRect(1, 2, y - 1, BACK_W - 4, 11, rgb565(0x28, 0x18, 0x08));
+      const on = i === STATE.settingsIndex;
+      drawText(1, 8, y, SET_ROWS[i], on ? COL_ACCENT : COL_TEXT, FontId.Normal);
+      drawText(1, BACK_W - 10, y, '>', on ? COL_ACCENT : COL_MUTED, FontId.Normal);
+    }
+    return;
+  }
+  const row = STATE.settingsIndex;
+  if (row === 0) {
+    clearFB(0, COL_BG); clearFB(1, COL_BG);
+    drawText(0, 4, 4, 'WIFI', COL_ACCENT, FontId.Bold);
+    drawText(1, 4, 4, 'Wi-Fi', COL_MUTED, FontId.Small);
+    if (STATE.wifiOn) {
+      drawText(1, 4, 18, `SSID ${STATE.ssid}`, COL_TEXT, FontId.Small);
+      drawText(1, 4, 30, `IP ${STATE.ip}`, COL_TEXT, FontId.Small);
+      drawText(1, 4, 48, 'OK: forget  BACK: exit', COL_MUTED, FontId.Tiny);
+    } else {
+      drawText(1, 4, 18, 'Not connected', COL_TEXT, FontId.Normal);
+      drawText(1, 4, 48, 'OK: start portal', COL_MUTED, FontId.Tiny);
+    }
+  } else if (row === 1) {
+    clearFB(0, COL_BG); clearFB(1, COL_BG);
+    drawText(0, 4, 4, 'TIME', COL_ACCENT, FontId.Bold);
+    drawText(1, 4, 4, 'Time', COL_MUTED, FontId.Small);
+    drawText(1, 4, 16, formatIso(), COL_TEXT, FontId.Tiny);
+    drawText(1, 4, 28, `TZ  ${TZ_TABLE[STATE.tzIndex]}`, COL_TEXT, FontId.Small);
+    drawText(1, 4, 40, `fmt ${STATE.hour12 ? '12-hour' : '24-hour'}`, COL_TEXT, FontId.Small);
+    drawText(1, 4, 54, 'OK: 12/24  UP/DN: TZ', COL_MUTED, FontId.Tiny);
+  } else if (row === 2) {
+    clearFB(0, COL_BG); clearFB(1, COL_BG);
+    drawText(0, 4, 4, 'BRIGHT', COL_ACCENT, FontId.Bold);
+    drawText(1, 4, 4, 'Brightness', COL_MUTED, FontId.Small);
+    drawText(1, 4, 20, `manual  ${STATE.brightness}%`, COL_TEXT, FontId.Small);
+    fillRect(1, 4, 36, 152, 8, rgb565(0x20, 0x20, 0x28));
+    fillRect(1, 4, 36, Math.floor(STATE.brightness * 152 / 100), 8, COL_ACCENT);
+    drawText(1, 4, 50, 'OK: auto/man  UP/DN: +/-', COL_MUTED, FontId.Tiny);
+  } else {
+    clearFB(0, COL_BG); clearFB(1, COL_BG);
+    drawText(0, 4, 4, FW_NAME, COL_ACCENT, FontId.Small);
+    drawText(1, 4, 4, 'About', COL_MUTED, FontId.Small);
+    drawText(1, 4, 16, `${FW_NAME} ${FW_VERSION}`, COL_TEXT, FontId.Small);
+    drawText(1, 4, 28, `API ${API_SEMVER}`, COL_TEXT, FontId.Small);
+    drawText(1, 4, 40, 'heap sim', COL_MUTED, FontId.Small);
+    drawText(1, 4, 52, 'CYD 2.8  ESP32-2432S028R', COL_MUTED, FontId.Tiny);
+  }
+}
+
+function drawTabBar() {
+  const labels = ['CLK', 'STAT', 'APP', 'SET'];
+  const ids = [AppId.Clock, AppId.Theme, AppId.Apps, AppId.Settings];
+  const y = BACK_H - 12;
+  fillRect(1, 0, y, BACK_W, 12, rgb565(0x10, 0x12, 0x18));
+  for (let i = 0; i < 4; i++) {
+    const x = i * 40;
+    const on = STATE.current === ids[i];
+    if (on) fillRect(1, x, y, 40, 12, rgb565(0x30, 0x18, 0x08));
+    const tw = textWidth(labels[i], FontId.Tiny);
+    drawText(1, x + Math.floor((40 - tw) / 2), y + 3, labels[i], on ? COL_ACCENT : COL_MUTED, FontId.Tiny);
+  }
+}
+
+// ── CANVAS ENGINE (subset) ────────────────────────────────
+function canvasOwns() { return !!(STATE.canvas && STATE.canvas.elems.length); }
+function tickCanvas() {
+  const c = STATE.canvas;
+  if (!c) return;
+  const now = millis();
+  c.elems = c.elems.filter((e) => {
+    if (e.timeoutSec > 0 && now - e.createdMs >= e.timeoutSec * 1000) return false;
+    return true;
+  });
+  if (!c.elems.length) { STATE.canvas = null; return; }
+  for (const e of c.elems) {
+    if (e.type === 'text' && e.boxW > 0 && e.scrollRate > 0) {
+      const tw = textWidth(e.text, e.font);
+      if (tw > e.boxW) {
+        const elapsed = now - e.createdMs;
+        if (elapsed < (e.scrollStartMs || 0)) e.scrollOff = 0;
+        else {
+          const moving = elapsed - (e.scrollStartMs || 0);
+          const cycle = tw + 8;
+          let period = e.scrollRate > 0 ? Math.floor(cycle * 60000 / e.scrollRate) : 1000;
+          period += e.scrollRepeatMs || 0;
+          if (period === 0) period = 1;
+          const phase = moving % period;
+          const moveMs = period - (e.scrollRepeatMs || 0);
+          e.scrollOff = phase < moveMs ? Math.floor(phase * cycle / moveMs) : 0;
+        }
+      }
+    }
+  }
+}
+function formatCountdown(e) {
+  const now = Math.floor(Date.now() / 1000);
+  let diff = e.cdDir === 0 ? e.timestamp - now : now - e.timestamp;
+  if (diff < 0) diff = 0;
+  const hours = Math.floor(diff / 3600);
+  const mins = Math.floor((diff % 3600) / 60);
+  const secs = diff % 60;
+  const showH = e.cdHours === 1 || hours !== 0;
+  return showH ? `${hours}:${pad2(mins)}:${pad2(secs)}` : `${pad2(mins)}:${pad2(secs)}`;
+}
+function drawXpm(e) {
+  const lines = e.xpm.replace(/\r/g, '').split('\n');
+  let i = 0;
+  if (!lines[i]) return;
+  i++;
+  const hdr = (lines[i++] || '').trim().split(/\s+/).map(Number);
+  const w = hdr[0], h = hdr[1], ncolors = hdr[2], cpp = hdr[3];
+  if (!w || !h || ncolors > 32 || cpp > 4) return;
+  const map = {};
+  for (let c = 0; c < ncolors; c++) {
+    const line = lines[i++] || '';
+    const key = line.slice(0, cpp);
+    const rest = line.slice(cpp).trim().split(/\s+/);
+    const val = rest[rest.length - 1] || 'white';
+    map[key] = val === 'none' || val === 'black' ? null : (val[0] === '#' ? hex8to565(val) : COL_TEXT);
+  }
+  let [x0, y0] = applyAlign(e.x, e.y, w, h, e.align);
+  for (let y = 0; y < h; y++) {
+    const row = lines[i++] || '';
+    for (let x = 0; x < w; x++) {
+      const key = row.substr(x * cpp, cpp);
+      const col = map[key];
+      if (col != null) pixel(e.display, x0 + x, y0 + y, col);
+    }
+  }
+}
+function drawCanvas() {
+  clearFB(0, COL_BG); clearFB(1, COL_BG);
+  const els = STATE.canvas.elems.slice().sort((a, b) => a.z - b.z);
+  for (const e of els) {
+    if (e.type === 'text') {
+      const tw = textWidth(e.text, e.font);
+      const th = textHeight(e.font);
+      const box = e.boxW || tw;
+      let [x, y] = applyAlign(e.x, e.y, box, th, e.align);
+      if (e.boxW && tw > e.boxW) drawTextClip(e.display, x, y, e.boxW, th, x - (e.scrollOff || 0), e.text, e.color, e.font);
+      else drawText(e.display, x, y, e.text, e.color, e.font);
+    } else if (e.type === 'countdown') {
+      const buf = formatCountdown(e);
+      const tw = textWidth(buf, FontId.Bold), th = textHeight(FontId.Bold);
+      const [x, y] = applyAlign(e.x, e.y, tw, th, e.align);
+      drawText(e.display, x, y, buf, e.color, FontId.Bold);
+    } else if (e.type === 'rectangle') {
+      const [x, y] = applyAlign(e.x, e.y, e.rw, e.rh, e.align);
+      if (e.fill === 'solid') fillRect(e.display, x, y, e.rw, e.rh, e.fillC0);
+      if (e.borderW > 0) {
+        hLine(e.display, x, y, e.rw, e.borderC);
+        hLine(e.display, x, y + e.rh - 1, e.rw, e.borderC);
+        vLine(e.display, x, y, e.rh, e.borderC);
+        vLine(e.display, x + e.rw - 1, y, e.rh, e.borderC);
+      }
+    } else if (e.type === 'xpmbitmap') {
+      drawXpm(e);
+    }
+  }
+}
+
+function drawFrame() {
+  tickCanvas();
+  if (canvasOwns()) {
+    drawCanvas();
+  } else {
+    if (STATE.current === AppId.Clock) drawClock();
+    else if (STATE.current === AppId.Theme) drawTheme();
+    else if (STATE.current === AppId.Apps) drawAppsScreen();
+    else drawSettings();
+    drawTabBar();
+  }
+  composite();
+}
+
+// ── APP MANAGER / INPUT ───────────────────────────────────
+function switchTo(id, wipe) {
+  if (id === STATE.current && !STATE.wiping) return;
+  STATE.pending = id;
+  STATE.settingsLeaf = false;
+  if (id !== AppId.Theme) rgbOff();
+  if (wipe) {
+    STATE.wiping = true;
+    STATE.wipeStart = millis();
+  } else {
+    STATE.current = id;
+  }
+  updateAppButtons();
+}
+
+function handleKey(k) {
+  if (k === Key.None) return;
+  log('key ' + Object.keys(Key).find((n) => Key[n] === k));
+  if (canvasOwns() && (k === Key.Back || k === Key.Off)) {
+    STATE.canvas = null;
+    rgbOff();
+    return;
+  }
+  if (k === Key.Start) { switchTo(AppId.Clock, true); return; }
+  if (k === Key.Busy) { switchTo(AppId.Theme, true); return; }
+  if (k === Key.Apps) { switchTo(AppId.Apps, true); return; }
+  if (k === Key.Settings) { switchTo(AppId.Settings, true); return; }
+
+  if (STATE.current === AppId.Clock && k === Key.Ok) {
+    STATE.hour12 = !STATE.hour12;
+    document.getElementById('hour12').checked = STATE.hour12;
+    saveSettings();
+  } else if (STATE.current === AppId.Theme) {
+    if (k === Key.Up || k === Key.Custom) STATE.themeIndex = (STATE.themeIndex + 1) % THEMES.length;
+    else if (k === Key.Down) STATE.themeIndex = (STATE.themeIndex + THEMES.length - 1) % THEMES.length;
+    saveSettings();
+    renderThemeGrid();
+  } else if (STATE.current === AppId.Settings) {
+    if (!STATE.settingsLeaf) {
+      if (k === Key.Down) STATE.settingsIndex = (STATE.settingsIndex + 1) % SET_ROWS.length;
+      else if (k === Key.Up) STATE.settingsIndex = (STATE.settingsIndex + SET_ROWS.length - 1) % SET_ROWS.length;
+      else if (k === Key.Ok) STATE.settingsLeaf = true;
+      else if (k === Key.Back) switchTo(AppId.Clock, true);
+    } else if (k === Key.Back) {
+      STATE.settingsLeaf = false;
+    } else if (STATE.settingsIndex === 0 && k === Key.Ok) {
+      STATE.wifiOn = !STATE.wifiOn;
+    } else if (STATE.settingsIndex === 1) {
+      if (k === Key.Ok) {
+        STATE.hour12 = !STATE.hour12;
+        document.getElementById('hour12').checked = STATE.hour12;
+        saveSettings();
+      } else if (k === Key.Up) STATE.tzIndex = (STATE.tzIndex + 1) % TZ_TABLE.length;
+      else if (k === Key.Down) STATE.tzIndex = (STATE.tzIndex + TZ_TABLE.length - 1) % TZ_TABLE.length;
+    } else if (STATE.settingsIndex === 2) {
+      if (k === Key.Up) STATE.brightness = clampi(STATE.brightness + 5, 5, 100);
+      if (k === Key.Down) STATE.brightness = clampi(STATE.brightness - 5, 5, 100);
+      document.getElementById('bright').value = STATE.brightness;
+      applyBright();
+      saveSettings();
+    }
+  }
+}
+
+function hitToKey(x, y) {
+  if (y >= 216) {
+    const slot = Math.floor(x / 80);
+    if (slot <= 0) return Key.Start;
+    if (slot === 1) return Key.Busy;
+    if (slot === 2) return Key.Apps;
+    return Key.Settings;
+  }
+  if (y < STATUS_H) return Key.None;
+  if (y < BACK_DY) return Key.Ok;
+  if (x < 40) return Key.Back;
+  if (x > TFT_W - 40) return Key.Ok;
+  return Key.None;
+}
+
+function canvasPos(ev) {
+  const r = canvasEl.getBoundingClientRect();
+  const x = Math.floor((ev.clientX - r.left) * TFT_W / r.width);
+  const y = Math.floor((ev.clientY - r.top) * TFT_H / r.height);
+  return { x: clampi(x, 0, TFT_W - 1), y: clampi(y, 0, TFT_H - 1) };
+}
+
+let down = false, downX = 0, downY = 0, lastX = 0, lastY = 0, lastTap = 0;
+function onDown(ev) {
+  ev.preventDefault();
+  const p = canvasPos(ev);
+  down = true; downX = lastX = p.x; downY = lastY = p.y;
+  if (ev.pointerId != null && canvasEl.setPointerCapture) {
+    try { canvasEl.setPointerCapture(ev.pointerId); } catch (e) {}
+  }
+}
+function onMove(ev) {
+  if (!down) return;
+  const p = canvasPos(ev);
+  lastX = p.x; lastY = p.y;
+}
+function onUp(ev) {
+  if (!down) return;
+  down = false;
+  if (ev && ev.clientX != null) {
+    const p = canvasPos(ev);
+    lastX = p.x; lastY = p.y;
+  }
+  const now = millis();
+  if (now - lastTap < 280) return;
+  lastTap = now;
+  const dx = lastX - downX, dy = lastY - downY;
+  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 2) {
+    handleKey(dx > 0 ? Key.Up : Key.Down);
+    return;
+  }
+  const k = hitToKey(downX, downY);
+  if (k !== Key.None) handleKey(k);
+}
+canvasEl.addEventListener('pointerdown', onDown);
+canvasEl.addEventListener('pointermove', onMove);
+canvasEl.addEventListener('pointerup', onUp);
+canvasEl.addEventListener('pointercancel', onUp);
+canvasEl.addEventListener('mousedown', onDown);
+canvasEl.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onUp);
+
+document.addEventListener('keydown', (ev) => {
+  if (ev.target && (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT' || ev.target.tagName === 'TEXTAREA')) return;
+  const map = { ArrowUp: Key.Up, ArrowDown: Key.Down, Enter: Key.Ok, Escape: Key.Back, Digit1: Key.Start, Digit2: Key.Busy, Digit3: Key.Apps, Digit4: Key.Settings };
+  if (map[ev.code] != null) { ev.preventDefault(); handleKey(map[ev.code]); }
+});
+
+// ── CONTROLS ──────────────────────────────────────────────
+function log(msg, err) {
+  const el = document.getElementById('log');
+  const d = document.createElement('div');
+  if (err) d.className = 'err';
+  d.textContent = msg;
+  el.prepend(d);
+  while (el.childElementCount > 40) el.lastChild.remove();
+}
+function updateAppButtons() {
+  document.querySelectorAll('#app-btns [data-key]').forEach((b) => {
+    const k = b.dataset.key;
+    const on = (k === 'start' && STATE.current === AppId.Clock)
+      || (k === 'busy' && STATE.current === AppId.Theme)
+      || (k === 'apps' && STATE.current === AppId.Apps)
+      || (k === 'settings' && STATE.current === AppId.Settings);
+    b.classList.toggle('is-on', on);
+  });
+}
+function renderThemeGrid() {
+  const grid = document.getElementById('theme-grid');
+  grid.innerHTML = '';
+  THEMES.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'theme-card' + (i === STATE.themeIndex ? ' is-on' : '');
+    b.innerHTML = `<strong>${t.label}</strong><div style="color:var(--muted);font-size:11px">${t.id}</div>`;
+    b.addEventListener('click', () => {
+      STATE.themeIndex = i;
+      saveSettings();
+      switchTo(AppId.Theme, true);
+      renderThemeGrid();
+    });
+    grid.appendChild(b);
+  });
+}
+document.getElementById('app-btns').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-key]');
+  if (!b) return;
+  const map = { start: Key.Start, busy: Key.Busy, apps: Key.Apps, settings: Key.Settings, ok: Key.Ok, back: Key.Back };
+  handleKey(map[b.dataset.key]);
+});
+document.getElementById('hour12').addEventListener('change', (e) => { STATE.hour12 = e.target.checked; saveSettings(); });
+document.getElementById('showSeconds').addEventListener('change', (e) => { STATE.showSeconds = e.target.checked; });
+document.getElementById('blinkColons').addEventListener('change', (e) => { STATE.blinkColons = e.target.checked; });
+document.getElementById('simOffline').addEventListener('change', (e) => { STATE.ntpReady = !e.target.checked; STATE.wifiOn = !e.target.checked; });
+function applyBright() {
+  document.getElementById('brightVal').textContent = STATE.brightness + '%';
+  document.getElementById('dimOverlay').style.opacity = String((100 - STATE.brightness) / 130);
+}
+document.getElementById('bright').addEventListener('input', (e) => {
+  STATE.brightness = Number(e.target.value);
+  applyBright();
+  saveSettings();
+});
+document.getElementById('hour12').checked = STATE.hour12;
+document.getElementById('bright').value = STATE.brightness;
+applyBright();
+
+document.getElementById('draw-form').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const fd = new FormData(ev.target);
+  const font = parseFont(fd.get('font'));
+  const display = fd.get('display') === 'back' ? 1 : 0;
+  STATE.canvas = {
+    app: 'web',
+    priority: 50,
+    elems: [{
+      id: 'web1', type: 'text',
+      x: Number(fd.get('x')), y: Number(fd.get('y')),
+      display, align: Align.TopLeft, z: 0,
+      text: fd.get('text'), font, color: hex8to565(fd.get('color')),
+      boxW: Number(fd.get('width')) || 0, scrollRate: 800,
+      scrollStartMs: 400, scrollRepeatMs: 1200, scrollOff: 0,
+      timeoutSec: 0, createdMs: millis()
+    }]
+  };
+  blinkRgb(COL_ACCENT, 3500);
+  log('draw "' + fd.get('text') + '" on ' + fd.get('display'));
+});
+document.getElementById('btn-clear').addEventListener('click', () => {
+  STATE.canvas = null;
+  rgbOff();
+  log('canvas cleared');
+});
+
+function updateHud() {
+  const names = ['Clock', 'Theme', 'Apps', 'Settings'];
+  document.getElementById('hud').innerHTML =
+    `app <b>${names[STATE.current]}</b>` +
+    (STATE.current === AppId.Theme ? ` · <b>${currentTheme().label}</b>` : '') +
+    (canvasOwns() ? ' · <b>canvas overlay</b>' : '') +
+    `<br>wifi <b>${STATE.wifiOn ? STATE.ip : 'offline'}</b> · ${formatClock(false, true, false)}`;
+}
+
+// ── LOOP ──────────────────────────────────────────────────
+function tick() {
+  const now = millis();
+  if (STATE.wiping) {
+    const dt = now - STATE.wipeStart;
+    STATE.wipeX = Math.floor(dt * TFT_W / 280);
+    if (dt > 140) STATE.current = STATE.pending;
+    if (dt > 280) {
+      STATE.wiping = false;
+      STATE.wipeX = -1;
+      STATE.current = STATE.pending;
+      updateAppButtons();
+    }
+  }
+  if (STATE.blinkUntil && now < STATE.blinkUntil) {
+    if (now - STATE.blinkLast > 280) {
+      STATE.blinkLast = now;
+      STATE.blinkOn = !STATE.blinkOn;
+      if (STATE.blinkOn) setRgb(STATE.rgb[0], STATE.rgb[1], STATE.rgb[2]);
+      else setRgb(0, 0, 0);
+    }
+  } else if (STATE.blinkUntil && now >= STATE.blinkUntil) {
+    rgbOff();
+  }
+  drawFrame();
+  updateHud();
+}
+
+renderThemeGrid();
+updateAppButtons();
+log('simulator ready');
+tick();
+setInterval(tick, 80);
+</script>
+</body>
+</html>

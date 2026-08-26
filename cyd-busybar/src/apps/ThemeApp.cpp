@@ -4,7 +4,7 @@
 #include "settings/Settings.h"
 
 static const ThemeInfo kThemes[] = {
-    {"on_air",  "ON AIR",  "RECORDING", rgb565(0xFF, 0x2A, 0x2A), rgb565(0x28, 0x00, 0x00), "pulse_bars"},
+    {"on_air",  "BUSY",    "RECORDING", rgb565(0xFF, 0x2A, 0x2A), rgb565(0x28, 0x00, 0x00), "pulse_bars"},
     {"meeting", "MEETING", "IN A CALL", rgb565(0x3D, 0x7F, 0xFF), rgb565(0x00, 0x10, 0x28), "dots"},
     {"dnd",     "DND",     "DO NOT DISTURB", rgb565(0xB0, 0x80, 0xFF), rgb565(0x10, 0x00, 0x20), "moon"},
     {"coding",  "CODING",  "HEADS DOWN", rgb565(0x22, 0xC5, 0x5E), rgb565(0x00, 0x18, 0x08), "code"},

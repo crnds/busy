@@ -58,12 +58,16 @@ static void blitGlyph(DisplayId d, int x, int y, char ch, uint16_t color, FontId
   bool bold = (id == FontId::Bold);
   int W = Display.width(d), H = Display.height(d);
   for (int dy = 0; dy < dh; dy++) {
-    int sy = dy * 7 / dh;
+    // Map onto the 5x7 source inclusively so Tiny/Small keep the midline
+    // (truncating dy*7/dh skipped row 3 and made CLOCK/STATUS unreadable).
+    int sy = (dh <= 1) ? 0 : (dy * 6 + (dh - 1) / 2) / (dh - 1);
+    if (sy > 6) sy = 6;
     int py = y + dy;
     if ((unsigned)py >= (unsigned)H) continue;
     if (clip && (py < clipY || py >= clipY + clipH)) continue;
     for (int dx = 0; dx < dw; dx++) {
-      int sx = dx * 5 / dw;
+      int sx = (dw <= 1) ? 0 : (dx * 4 + (dw - 1) / 2) / (dw - 1);
+      if (sx > 4) sx = 4;
       int px = x + dx;
       if ((unsigned)px >= (unsigned)W) continue;
       if (clip && (px < clipX || px >= clipX + clipW)) continue;
