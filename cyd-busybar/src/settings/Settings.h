@@ -1,43 +1,33 @@
+// Settings.h — persisted to /config.json on LittleFS.
+//
+// EXCEPT ssid/pass: those live in NVS (see Net.h), not here, because
+// `pio run -t uploadfs` overwrites this entire file's storage on every
+// filesystem reflash and Wi-Fi credentials are the one thing that should
+// survive it. The fields stay in this struct -- everything already reads
+// CFG.ssid/CFG.pass -- wifiBegin() is just what populates them now.
 #pragma once
 
-#include "Types.h"
+#include <stdint.h>
+#include "../../include/config.h"
 
-struct TzEntry {
-  const char* name;
-  const char* posix;
-  const char* offset;
-  const char* abbr;
+struct Config {
+    char    ssid[33];        // NOT round-tripped through /config.json -- see above
+    char    pass[65];        // ditto
+    char    host[32];
+    char    tz[48];          // POSIX TZ string, e.g. "ICT-7"
+    char    theme[24];       // active status theme folder name
+    char    apiToken[33];    // empty = open mode
+    bool    clock24;
+    bool    night;
+    uint8_t blMode;          // 0 = auto (LDR), 1..4 = 25/50/75/100 %
 };
 
-struct SettingsData {
-  char wifiSsid[33];
-  char wifiPass[65];
-  char tzName[24];
-  char tzPosix[48];
-  char apiToken[49];
-  char theme[24];
-  bool hour12;
-  bool showSeconds;
-  bool blinkColons;
-  bool showDate;
-  BrightnessMode brightnessMode;
-  uint8_t brightness;          // 0-100
-  uint8_t rotation;            // 1 or 3
-};
+extern Config CFG;
 
-class SettingsStore {
- public:
-  SettingsData d;
+void settingsBegin();        // mounts LittleFS and loads, or writes defaults
+bool settingsSave();
+void settingsDefaults();
 
-  void begin();
-  bool load();
-  bool save();
-  void applyDefaults();
-  const TzEntry* findTz(const char* name) const;
-  const TzEntry* tzList(size_t& count) const;
-  void setTz(const char* name);
-};
-
-extern SettingsStore Settings;
-extern const TzEntry TZ_TABLE[];
-extern const size_t TZ_TABLE_LEN;
+// Backlight duty for the current mode, given the last LDR reading.
+uint8_t settingsDutyFor(uint16_t ldrRaw);
+const char *settingsBrightnessLabel();

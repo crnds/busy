@@ -1,148 +1,132 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CYD BUSY</title>
-  <link rel="stylesheet" href="/style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cyd-busybar</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top">
-    <div class="brand">
-      <span class="mark" aria-hidden="true"></span>
-      <div>
-        <h1>CYD BUSY</h1>
-        <p class="sub" id="conn-line">connecting</p>
-      </div>
+
+<header class="topbar">
+  <h1>cyd-busybar</h1>
+  <div class="conn" id="conn"><span class="dot" id="conn-dot"></span><span id="conn-text">connecting</span></div>
+</header>
+
+<main>
+
+<section class="panel" aria-labelledby="h-preview">
+  <h2 id="h-preview">Live panel</h2>
+  <div class="screens">
+    <figure class="screen">
+      <img id="shot" alt="The panel, 160 by 80 pixels" width="160" height="80">
+      <figcaption>160&times;80 RGB, shown at 2&times; <span class="owner" id="owner"></span></figcaption>
+    </figure>
+  </div>
+  <label class="inline"><input type="checkbox" id="live" checked> Live preview</label>
+</section>
+
+<section class="panel" aria-labelledby="h-draw">
+  <h2 id="h-draw">Draw</h2>
+  <form id="draw-form" class="grid">
+    <label>Type
+      <select id="d-type">
+        <option value="text">Text</option>
+        <option value="countdown">Countdown</option>
+        <option value="rectangle">Rectangle</option>
+      </select>
+    </label>
+    <label>Text <input type="text" id="d-text" value="HELLO" maxlength="63"></label>
+    <label>Colour <input type="color" id="d-color" value="#18bcf2"></label>
+    <label>X <input type="number" id="d-x" value="80" min="-160" max="160"></label>
+    <label>Y <input type="number" id="d-y" value="40" min="-80" max="80"></label>
+    <label>W <input type="number" id="d-w" value="160" min="1" max="160"></label>
+    <label>H <input type="number" id="d-h" value="80" min="1" max="80"></label>
+    <label>Font
+      <select id="d-font"><option value="small">Small 5&times;7</option><option value="tiny">Tiny 3&times;5</option></select>
+    </label>
+    <label>Scale <input type="number" id="d-scale" value="3" min="1" max="8"></label>
+    <label>Align
+      <select id="d-align">
+        <option value="0">Top left</option><option value="1">Top centre</option><option value="2">Top right</option>
+        <option value="3">Mid left</option><option value="4" selected>Mid centre</option><option value="5">Mid right</option>
+        <option value="6">Bottom left</option><option value="7">Bottom centre</option><option value="8">Bottom right</option>
+      </select>
+    </label>
+    <label>Countdown to <input type="datetime-local" id="d-target"></label>
+    <label>Timeout ms <input type="number" id="d-timeout" value="0" min="0" step="500"></label>
+    <label>Priority <input type="number" id="d-prio" value="50" min="1" max="100"></label>
+    <label>App name <input type="text" id="d-app" value="webui" maxlength="23"></label>
+    <label class="inline"><input type="checkbox" id="d-scroll"> Scroll when too wide</label>
+    <label>LED <input type="color" id="d-led" value="#000000"></label>
+    <div class="actions">
+      <button type="submit" class="primary">Draw</button>
+      <button type="button" id="btn-clear-app">Clear this app</button>
+      <button type="button" id="btn-clear-all" class="danger">Clear all</button>
     </div>
-    <nav class="tabs" role="tablist">
-      <button class="tab is-on" data-tab="draw" type="button">Draw</button>
-      <button class="tab" data-tab="themes" type="button">Themes</button>
-      <button class="tab" data-tab="device" type="button">Device</button>
-    </nav>
-  </header>
+  </form>
+</section>
 
-  <main>
-    <section class="preview-block">
-      <div class="preview-frame">
-        <div class="led-stage">
-          <p class="led-cap">Front 72×16</p>
-          <canvas id="front" width="72" height="16" aria-label="Front display preview"></canvas>
-        </div>
-        <div class="led-stage">
-          <p class="led-cap">Back 160×80</p>
-          <canvas id="back" width="160" height="80" aria-label="Back display preview"></canvas>
-        </div>
-      </div>
-      <p class="hint" id="preview-status">Live preview ~2 fps from /api/screen</p>
-    </section>
+<section class="panel" aria-labelledby="h-theme">
+  <h2 id="h-theme">Status theme</h2>
+  <div class="chips" id="theme-chips"></div>
+</section>
 
-    <section id="panel-draw" class="panel">
-      <h2>Draw elements</h2>
-      <form id="draw-form" class="draw-form">
-        <label>Application
-          <input name="application_name" value="web" maxlength="32" required>
-        </label>
-        <label>Priority
-          <input name="priority" type="number" min="1" max="100" value="50">
-        </label>
-        <label>LED notify
-          <input name="led" type="color" value="#F4620E">
-        </label>
-        <label>Type
-          <select name="type" id="el-type">
-            <option value="text">text</option>
-            <option value="countdown">countdown</option>
-            <option value="rectangle">rectangle</option>
-            <option value="xpmbitmap">xpmbitmap</option>
-          </select>
-        </label>
-        <label>Display
-          <select name="display">
-            <option value="front">front</option>
-            <option value="back">back</option>
-          </select>
-        </label>
-        <label>Align
-          <select name="align">
-            <option value="top_left">top_left</option>
-            <option value="center">center</option>
-            <option value="top_mid">top_mid</option>
-            <option value="bottom_mid">bottom_mid</option>
-          </select>
-        </label>
-        <label>X <input name="x" type="number" value="2"></label>
-        <label>Y <input name="y" type="number" value="4"></label>
-        <label>Timeout (s) <input name="timeout" type="number" min="0" value="0"></label>
-        <label class="span-2">Text
-          <input name="text" value="HELLO BUSY" maxlength="96">
-        </label>
-        <label>Font
-          <select name="font">
-            <option>tiny</option>
-            <option>small</option>
-            <option selected>normal</option>
-            <option>condensed</option>
-            <option>bold</option>
-            <option>large</option>
-            <option>extra_large</option>
-            <option>global</option>
-          </select>
-        </label>
-        <label>Color <input name="color" type="color" value="#FFFFFF"></label>
-        <label>Width (scroll) <input name="width" type="number" min="0" value="72"></label>
-        <label>Scroll rate <input name="scroll_rate" type="number" min="0" value="800"></label>
-        <label>Countdown unix <input name="timestamp" placeholder="seconds"></label>
-        <label>Direction
-          <select name="direction">
-            <option value="time_left">time_left</option>
-            <option value="time_since">time_since</option>
-          </select>
-        </label>
-        <div class="actions span-2">
-          <button type="submit">POST /api/display/draw</button>
-          <button type="button" id="btn-clear" class="ghost">Clear canvas</button>
-        </div>
-      </form>
-      <p class="hint" id="draw-msg"></p>
-    </section>
+<section class="panel" aria-labelledby="h-device">
+  <h2 id="h-device">Device</h2>
+  <div class="grid">
+    <label>Brightness
+      <select id="s-bright">
+        <option value="auto">Auto (ambient)</option>
+        <option value="25">25%</option><option value="50">50%</option>
+        <option value="75">75%</option><option value="100">100%</option>
+      </select>
+    </label>
+    <label>Clock
+      <select id="s-clock"><option value="24">24-hour</option><option value="12">12-hour</option></select>
+    </label>
+    <label>Time zone <input type="text" id="s-tz" list="tzlist" placeholder="ICT-7"><datalist id="tzlist"></datalist></label>
+    <div class="actions">
+      <button type="button" id="btn-save-device" class="primary">Apply</button>
+      <button type="button" id="btn-sync">Re-sync time</button>
+      <button type="button" id="btn-key" data-key="ok">Next tab</button>
+    </div>
+  </div>
+  <dl class="readout" id="readout"></dl>
+</section>
 
-    <section id="panel-themes" class="panel is-hidden">
-      <h2>Status themes</h2>
-      <div class="theme-grid" id="theme-grid"></div>
-    </section>
+<section class="panel" id="wifi-panel" aria-labelledby="h-wifi">
+  <h2 id="h-wifi">Wi-Fi</h2>
 
-    <section id="panel-device" class="panel is-hidden">
-      <h2>Device</h2>
-      <form id="device-form" class="device-form">
-        <label>Brightness
-          <select name="brightness_mode" id="br-mode">
-            <option value="auto">auto (LDR)</option>
-            <option value="manual">manual</option>
-          </select>
-        </label>
-        <label>Manual %
-          <input name="brightness" id="br-val" type="range" min="5" max="100" value="80">
-        </label>
-        <label>Clock
-          <select name="hour12" id="hour12">
-            <option value="true">12-hour</option>
-            <option value="false">24-hour</option>
-          </select>
-        </label>
-        <label>Timezone
-          <select name="tz_name" id="tz"></select>
-        </label>
-        <label class="span-2">API token (blank = open)
-          <input name="api_token" type="password" autocomplete="off" placeholder="optional">
-        </label>
-        <div class="actions span-2">
-          <button type="submit">Save</button>
-        </div>
-      </form>
-      <pre class="status-dump" id="status-dump">loading status</pre>
-    </section>
-  </main>
-  <script src="/app.js"></script>
+  <div class="ap-bar">
+    <div>
+      <strong id="ap-state">Setup AP is off</strong>
+      <span class="note" id="ap-detail"></span>
+    </div>
+    <div class="actions">
+      <button type="button" id="btn-ap">Start setup AP</button>
+      <button type="button" id="btn-reconnect">Reconnect</button>
+      <button type="button" id="btn-forget" class="danger">Forget network</button>
+    </div>
+  </div>
+
+  <div class="actions" style="margin:12px 0">
+    <button type="button" id="btn-scan">Scan for networks</button>
+  </div>
+  <ul class="nets" id="nets"></ul>
+
+  <p class="note">Saving reboots the device onto the chosen network.</p>
+  <div class="grid">
+    <label>SSID <input type="text" id="w-ssid" maxlength="32"></label>
+    <label>Password <input type="password" id="w-pass" maxlength="64"></label>
+    <div class="actions"><button type="button" id="btn-wifi" class="primary">Save and reboot</button></div>
+  </div>
+</section>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="app.js"></script>
 </body>
 </html>

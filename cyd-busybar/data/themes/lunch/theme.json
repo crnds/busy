@@ -1,10 +1,1 @@
-{
-  "label": "LUNCH",
-  "color": "#F4C20EFF",
-  "text_color": "#FFFFFFFF",
-  "front_text": "LUNCH",
-  "back_title": "LUNCH",
-  "back_sub": "BACK SOON",
-  "order": 50,
-  "anim": "utensils"
-}
+{"label":"LUNCH","fg":"#FED7AA","bg":"#7C2D12","accent":"#F97316","effect":"none","period_ms":1200}

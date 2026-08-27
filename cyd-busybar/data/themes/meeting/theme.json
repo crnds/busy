@@ -1,10 +1,1 @@
-{
-  "label": "MEETING",
-  "color": "#3D7FFFFF",
-  "text_color": "#FFFFFFFF",
-  "front_text": "MEETING",
-  "back_title": "MEETING",
-  "back_sub": "IN A CALL",
-  "order": 30,
-  "anim": "dots"
-}
+{"label":"MEETING","fg":"#FFFFFF","bg":"#1F3A8A","accent":"#60A5FA","effect":"sweep","period_ms":2600}

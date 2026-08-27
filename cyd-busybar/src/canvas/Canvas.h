@@ -1,99 +1,86 @@
+// Canvas.h — the BUSY Bar draw model.
+//
+// A draw request is a namespaced, prioritised set of ELEMENTS on the virtual
+// panel. Elements live until they expire, are replaced by the same id, or
+// their application is cleared -- so a caller can post once and walk away,
+// which is what /api/display/draw is for.
+//
+// Ownership: while any element is live the canvas owns the panel and the local
+// apps (clock, themes) stand down. Between REMOTE callers, priority arbitrates
+// and a loser gets 409, matching the original's semantics.
+//
+// Elements still ACCEPT a `display` field, and 0 and 1 are both valid, because
+// BUSY Bar tooling sends it. With one screen it selects nothing -- both land on
+// the same panel. Two elements aimed at "different displays" therefore overlap,
+// which is the honest consequence of the hardware having one.
 #pragma once
 
-#include "Types.h"
+#include <ArduinoJson.h>
+#include <stdint.h>
+#include "../vdisp/VDisplay.h"
+#include "../../include/config.h"
 
-enum class ElemType : uint8_t {
-  Text, Image, Anim, Countdown, Rect, Xpm
+enum ElemType : uint8_t {
+    EL_TEXT = 0, EL_RECT, EL_IMAGE, EL_ANIM, EL_COUNTDOWN, EL_XPM
 };
 
-enum class FillMode : uint8_t { None, Solid, GradH, GradV };
+struct Element {
+    bool     used;
+    char     id[ELEM_ID_LEN];
+    char     app[APP_NAME_LEN];
+    uint8_t  type;
+    int16_t  x, y, w, h;
+    uint8_t  align;        // VAlign
+    int8_t   z;
+    uint16_t colour;
+    uint32_t expiresAt;    // millis deadline; 0 = never
 
-struct CanvasElem {
-  bool used;
-  char id[24];
-  char app[24];
-  ElemType type;
-  DisplayId display;
-  Align align;
-  int16_t x, y;
-  int32_t z;
-  uint32_t timeoutSec;
-  int64_t displayUntil;     // 0 = none
-  uint32_t createdMs;
-  uint16_t color;
-  uint8_t opacity;
-  // text
-  char text[128];
-  FontId font;
-  uint16_t boxW;            // 0 = no clip
-  uint16_t scrollRate;      // px per minute
-  uint16_t scrollStartMs;
-  uint16_t scrollRepeatMs;
-  int16_t scrollOff;
-  uint32_t scrollLastMs;
-  bool scrolling;
-  // image / anim path
-  char path[80];
-  bool loop;
-  uint16_t animW, animH, animFrames, animDelay;
-  uint16_t animFrame;
-  uint32_t animLastMs;
-  bool animLoaded;
-  // countdown
-  int64_t timestamp;
-  uint8_t cdDir;            // 0 time_left, 1 time_since
-  uint8_t cdHours;          // 0 when_non_zero, 1 always
-  // rect
-  uint16_t rw, rh, radius, borderW;
-  FillMode fill;
-  uint16_t fillC[2];
-  uint16_t borderC;
-  // xpm
-  char* xpm;
+    char     text[ELEM_TEXT_LEN];
+    uint8_t  font;         // VFont
+    uint8_t  scale;
+
+    bool     scroll;
+    uint16_t scrollRateMs;
+    uint32_t scrollStartMs;   // hold before the first step
+    uint32_t scrollRepeatMs;  // hold between passes
+    int32_t  scrollOff;
+    uint32_t scrollNextMs;
+
+    int64_t  targetEpoch;     // countdown
+    bool     countUp;
+
+    char     path[ELEM_PATH_LEN];
+    uint16_t frames, frameMs, frame;
+    uint32_t frameNextMs;
+
+    uint8_t *inlineBits;      // xpm payload, heap-owned
+    uint16_t inlineLen;
 };
 
-enum class CanvasResult : uint8_t {
-  Ok = 0,
-  BadParameters,
-  LowPriority,
-  EmptyScreen,
-  TooManyElements,
-  NonexistentElementId,
-  WrongAppId
+enum DrawResult : uint8_t {
+    DR_OK = 0,
+    DR_BAD_REQUEST,
+    DR_CONFLICT,     // a higher-priority application owns a target panel
+    DR_FULL          // CANVAS_MAX_ELEMENTS reached
 };
 
-class CanvasEngine {
- public:
-  void begin();
-  void tick();
-  void draw();  // into virtual FBs (caller already cleared or we clear)
+void       canvasBegin();
 
-  CanvasResult show(const char* app, int priority, CanvasElem* incoming, int n,
-                    uint16_t ledColor, bool blinkLed);
-  CanvasResult clearApp(const char* app, const char** ids, int nIds);
+// Parse and apply one draw request. `err` receives a human-readable reason.
+DrawResult canvasDraw(JsonObjectConst req, char *err, size_t errLen);
 
-  bool ownsScreen() const { return active_ && count_ > 0; }
-  int priority() const { return priority_; }
-  const char* appId() const { return app_; }
-  int count() const { return count_; }
+// Selective clear. app == nullptr clears every namespace.
+void       canvasClear(const char *app);
 
-  // Used by HTTP parser
-  static bool parseFill(const char* s, FillMode& out);
+// Advance animations, scrolling and expiry, then repaint the panel if the
+// canvas owns it. Returns true if it drew anything.
+bool       canvasTick(uint32_t now);
 
- private:
-  CanvasElem elems_[CANVAS_MAX_ELEMENTS];
-  int count_ = 0;
-  int priority_ = 0;
-  char app_[24] = "";
-  bool active_ = false;
+bool       canvasOwns();
+uint8_t    canvasPriority();
+const char *canvasOwner();
+uint16_t   canvasElementCount();
 
-  void compact();
-  void expire();
-  void drawElem(CanvasElem& e);
-  void drawImageFile(CanvasElem& e);
-  void drawAnim(CanvasElem& e);
-  void drawXpm(CanvasElem& e);
-  bool loadAnimHeader(CanvasElem& e);
-};
-
-extern CanvasEngine Canvas;
+// The last led_notification_color a request carried, as RGB888, or -1.
+int32_t    canvasLedColour();
+void       canvasClearLed();

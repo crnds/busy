@@ -1,10 +1,1 @@
-{
-  "label": "DND",
-  "color": "#B080FFFF",
-  "text_color": "#FFFFFFFF",
-  "front_text": "DND",
-  "back_title": "DND",
-  "back_sub": "DO NOT DISTURB",
-  "order": 20,
-  "anim": "moon"
-}
+{"label":"DND","fg":"#FCA5A5","bg":"#7F1D1D","accent":"#EF4444","effect":"pulse","period_ms":1800}

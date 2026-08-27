@@ -1,8 +1,12 @@
-.pio
-.vscode
+.pio/
+.vscode/
 .clangd
 compile_commands.json
 *.bin
 *.elf
 *.map
 .DS_Store
+
+# Generated. Rebuild with the scripts in scripts/.
+scripts/sim_fonts.js
+scripts/sim_vfont.js

@@ -1,14 +1,18 @@
-#include "net/Mdns.h"
-#include "net/WifiSetup.h"
+#include "Net.h"
+#include "../settings/Settings.h"
+#include "../../include/config.h"
 #include <ESPmDNS.h>
 
-void Mdns::begin() {
-  if (!WifiSetup::connected()) return;
-  if (!MDNS.begin("cyd-busybar")) return;
-  MDNS.addService("http", "tcp", 80);
-  MDNS.addService("busybar", "tcp", 80);
-  MDNS.addServiceTxt("busybar", "tcp", "path", "/");
-  MDNS.addServiceTxt("busybar", "tcp", "fw", "cyd-busybar");
+void mdnsBegin() {
+    if (!MDNS.begin(CFG.host)) {
+        Serial.println("[mdns] begin failed");
+        return;
+    }
+    MDNS.addService("http", "tcp", 80);
+    // Advertised as the original does, so BUSY Bar discovery tooling finds us.
+    MDNS.addService("busybar", "tcp", 80);
+    MDNS.addServiceTxt("busybar", "tcp", "fw", FW_NAME);
+    MDNS.addServiceTxt("busybar", "tcp", "ver", FW_VERSION);
+    MDNS.addServiceTxt("busybar", "tcp", "api", FW_API_COMPAT);
+    Serial.printf("[mdns] http://%s.local\n", CFG.host);
 }
-
-void Mdns::end() { MDNS.end(); }
