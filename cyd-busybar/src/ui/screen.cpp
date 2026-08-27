@@ -84,7 +84,7 @@ void screenSetNight(bool on) {
 }
 
 // ── HEADER ───────────────────────────────────────────────────────────────
-static const char *TAB_LABEL[TAB_N] = { "Clock", "Status", "Settings" };
+static const char *TAB_LABEL[TAB_N] = { "Status", "Settings" };
 
 // 0 = everything reachable, 1 = up but the time is unknown, 2 = no network.
 static uint8_t connState() {
@@ -173,7 +173,7 @@ static const char *chipLabel(bool owns, bool ap, uint8_t &vis) {
         return canvasOwner();
     }
     vis = BV_INACTIVE;
-    return ap ? "Wi-Fi setup" : "Clock";
+    return ap ? "Wi-Fi setup" : "Status";
 }
 
 static uint16_t hashStr(const char *s) {

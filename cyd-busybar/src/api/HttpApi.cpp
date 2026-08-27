@@ -174,8 +174,7 @@ static void routeStatus(AsyncWebServerRequest *r) {
     p["priority"] = canvasPriority();
 
     d["elements"] = canvasElementCount();
-    d["app"]      = appActive() == APP_CLOCK ? "clock"
-                  : appActive() == APP_STATUS ? "status" : "settings";
+    d["app"]      = appActive() == APP_STATUS ? "status" : "settings";
     d["theme"]    = themeCurrent().name;
     d["time_synced"] = timeSynced();
 
@@ -278,7 +277,7 @@ static void routeInput(AsyncWebServerRequest *r) {
     if (!r->hasParam("key")) { sendErr(r, 400, "key is required"); return; }
     String k = r->getParam("key")->value();
     if      (k == "ok")   appSetActive((AppId)((appActive() + 1) % APP_COUNT));
-    else if (k == "back") appSetActive(APP_CLOCK);
+    else if (k == "back") appSetActive(APP_STATUS);
     else if (k == "up")   { appSetActive(APP_STATUS); themeNext(-1); }
     else if (k == "down") { appSetActive(APP_STATUS); themeNext(1); }
     else { sendErr(r, 400, "key must be ok, back, up or down"); return; }

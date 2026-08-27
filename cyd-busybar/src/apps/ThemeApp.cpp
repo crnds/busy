@@ -11,7 +11,7 @@
 // decoder, a theme here is a label, three colours and a NAMED PROCEDURAL
 // EFFECT -- so a theme is a few hundred bytes of JSON and recolours for free,
 // exactly as the icons do.
-static const char *THEME_DIRS[] = { "busy", "meeting", "dnd", "coding", "lunch" };
+static const char *THEME_DIRS[] = { "busy", "call", "normal", "lunch", "home" };
 static const uint8_t THEME_N = sizeof(THEME_DIRS) / sizeof(THEME_DIRS[0]);
 
 static StatusTheme s_cur;
@@ -115,9 +115,21 @@ void themeRender(uint32_t now) {
     uint16_t bg = t.bg, fg = t.fg, accent = t.accent;
     if (t.effect == 1 && !onBeat) { bg = t.accent; fg = t.bg; }       // blink
 
+    // Scale text uniformly (preserving 1:1 aspect ratio) to fit as large as possible
+    int maxW = (t.effect == 4) ? 104 : (VD_W - 14);
+    int maxH = (t.effect == 2 || t.effect == 3) ? 54 : 64;
+    int n = (int)strlen(t.label);
+    int baseW = n ? (n * 6 - 1) : 1;
+    int baseH = 7;
+    int sx = maxW / baseW;
+    int sy = maxH / baseH;
+    uint8_t scale = (uint8_t)(sx < sy ? sx : sy);
+    if (scale < 1) scale = 1;
+    int cy = (t.effect == 2 || t.effect == 3) ? 35 : 40;
+
     vd::clear(bg);
     vd::drawRect(2, 2, VD_W - 4, VD_H - 4, accent);
-    vd::text(VD_W / 2, 36, t.label, fg, VF_SMALL, 3, VA_MC);
+    vd::text(VD_W / 2, cy, t.label, fg, VF_SMALL, scale, VA_MC);
 
     // The effect is still a SHAPE as well as a colour. Night mode collapses
     // the palette to one hue, so a theme that differed only in colour would
@@ -172,19 +184,19 @@ void themeRender(uint32_t now) {
             uint32_t oBits = FLAME_O[frame][r];
             uint32_t yBits = FLAME_Y[frame][r];
             uint32_t wBits = FLAME_W[frame][r];
-            int y = 24 + r;
+            int y = 28 + r;
             for (int c = 0; c < 20; c++) {
                 int shiftL = 19 - c;
-                if ((wBits >> shiftL) & 1)      vd::pixel(18 + c, y, cW);
-                else if ((yBits >> shiftL) & 1) vd::pixel(18 + c, y, cY);
-                else if ((oBits >> shiftL) & 1) vd::pixel(18 + c, y, cO);
-                else if ((dBits >> shiftL) & 1) vd::pixel(18 + c, y, cD);
+                if ((wBits >> shiftL) & 1)      vd::pixel(8 + c, y, cW);
+                else if ((yBits >> shiftL) & 1) vd::pixel(8 + c, y, cY);
+                else if ((oBits >> shiftL) & 1) vd::pixel(8 + c, y, cO);
+                else if ((dBits >> shiftL) & 1) vd::pixel(8 + c, y, cD);
 
                 int shiftR = c;
-                if ((wBits >> shiftR) & 1)      vd::pixel(122 + c, y, cW);
-                else if ((yBits >> shiftR) & 1) vd::pixel(122 + c, y, cY);
-                else if ((oBits >> shiftR) & 1) vd::pixel(122 + c, y, cO);
-                else if ((dBits >> shiftR) & 1) vd::pixel(122 + c, y, cD);
+                if ((wBits >> shiftR) & 1)      vd::pixel(132 + c, y, cW);
+                else if ((yBits >> shiftR) & 1) vd::pixel(132 + c, y, cY);
+                else if ((oBits >> shiftR) & 1) vd::pixel(132 + c, y, cO);
+                else if ((dBits >> shiftR) & 1) vd::pixel(132 + c, y, cD);
             }
         }
     }

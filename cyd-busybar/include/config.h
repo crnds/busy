@@ -47,7 +47,7 @@
 #define SP_6               24
 
 // ── LAYOUT: HEADER, y 0..31 (DESIGN.md §9.1) ─────────────────────────────
-// Three regions tile the bar exactly: 26 + 3*81 + 51 = 320.
+// Two regions tile the bar exactly: 26 + 2*121 + 52 = 320.
 #define HDR_H              32
 #define HDR_DIV_Y          31
 
@@ -55,12 +55,12 @@
 #define CONN_W             26
 
 #define TAB_X              26
-#define TAB_W              81
-#define TAB_N              3
+#define TAB_W              121
+#define TAB_N              2
 #define TAB_UNDERLINE_H    2
 
-#define CLK_X              269
-#define CLK_W              51
+#define CLK_X              268
+#define CLK_W              52
 #define CLK_MARGIN_R       6
 
 // ── LAYOUT: BODY, y 32..239 (208px) ──────────────────────────────────────

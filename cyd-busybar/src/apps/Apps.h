@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include "../vdisp/VDisplay.h"
 
-enum AppId : uint8_t { APP_CLOCK = 0, APP_STATUS, APP_SETTINGS, APP_COUNT };
+enum AppId : uint8_t { APP_STATUS = 0, APP_SETTINGS, APP_COUNT };
 
 void  appBegin();
 void  appTick(uint32_t now);

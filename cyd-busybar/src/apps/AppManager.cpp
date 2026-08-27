@@ -4,11 +4,11 @@
 #include "../ui/screen.h"
 #include "../net/Net.h"
 
-static AppId s_active = APP_CLOCK;
+static AppId s_active = APP_STATUS;
 
 void appBegin() {
     themeAppBegin();
-    s_active = APP_CLOCK;
+    s_active = APP_STATUS;
 }
 
 AppId appActive() { return s_active; }
@@ -31,18 +31,14 @@ void appTick(uint32_t now) {
 
     // If the canvas holds the panel there is nothing left for a local app to
     // draw on. Settings draws on the CYD's own chrome, so it leaves the panel
-    // to whichever panel app was last active -- the clock, by default.
+    // to whichever panel app was last active -- the status theme, by default.
     if (canvasOwns()) return;
 
-    // The setup AP outranks both panel apps. It is the only place the SSID and
+    // The setup AP outranks the status app. It is the only place the SSID and
     // address are readable from across the room, and an open AP that nothing
     // announces is the one that gets left running.
     if (apActive()) { setupRender(now); return; }
 
-    AppId panelApp = (s_active == APP_SETTINGS) ? APP_CLOCK : s_active;
-    switch (panelApp) {
-        case APP_STATUS: themeRender(now); break;
-        case APP_CLOCK:
-        default:         clockRender(now); break;
-    }
+    AppId panelApp = (s_active == APP_SETTINGS) ? APP_STATUS : s_active;
+    if (panelApp == APP_STATUS) themeRender(now);
 }

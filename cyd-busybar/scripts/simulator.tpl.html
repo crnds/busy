@@ -278,9 +278,11 @@ function vframe(x, y, w, h, col) {
 function vGlyphW(f) { return f === 'tiny' ? 3 : 5; }
 function vGlyphH(f) { return f === 'tiny' ? 5 : 7; }
 function vAdv(f) { return vGlyphW(f) + 1; }
-function vTextW(f, s, sc) { return s.length ? (s.length * vAdv(f) - 1) * sc : 0; }
-function vtext(x, y, s, col, f, sc, align) {
-  const tw = vTextW(f, s, sc), th = vGlyphH(f) * sc;
+function vTextW(f, s, scX) { return s.length ? (s.length * vAdv(f) - 1) * scX : 0; }
+function vtext(x, y, s, col, f, scX, scY, align) {
+  if (align === undefined) { align = scY; scY = scX; }
+  if (!scY) scY = scX;
+  const tw = vTextW(f, s, scX), th = vGlyphH(f) * scY;
   const am = align % 3, ad = (align / 3) | 0;
   if (am === 1) x -= (tw / 2) | 0; else if (am === 2) x -= tw;
   if (ad === 1) y -= (th / 2) | 0; else if (ad === 2) y -= th;
@@ -292,8 +294,8 @@ function vtext(x, y, s, col, f, sc, align) {
     if (code < 0x20 || code > 0x7E) code = 63;
     const g = tbl[code - 0x20];
     for (let c = 0; c < gw; c++) for (let r = 0; r < gh; r++)
-      if ((g[c] >> r) & 1) vrect(pen + c*sc, y + r*sc, sc, sc, col);
-    pen += vAdv(f) * sc;
+      if ((g[c] >> r) & 1) vrect(pen + c*scX, y + r*scY, scX, scY, col);
+    pen += vAdv(f) * scX;
   }
 }
 // present(): a flat 2x, and every stored colour goes through the palette map
@@ -308,11 +310,11 @@ function present() {
 
 // ══ STATE ═══════════════════════════════════════════════════════════════
 const THEMES = {
-  busy:    { label:'BUSY',    fg:'#FFFFFF', bg:'#FF0000', accent:'#FFD700', effect:'flame' },
-  meeting: { label:'MEETING', fg:'#FFFFFF', bg:'#1F3A8A', accent:'#60A5FA', effect:'sweep' },
-  dnd:     { label:'DND',     fg:'#FCA5A5', bg:'#7F1D1D', accent:'#EF4444', effect:'pulse' },
-  coding:  { label:'CODING',  fg:'#86EFAC', bg:'#052E16', accent:'#22C55E', effect:'sweep' },
-  lunch:   { label:'LUNCH',   fg:'#FED7AA', bg:'#7C2D12', accent:'#F97316', effect:'none'  },
+  busy:   { label:'BUSY',    fg:'#FFFFFF', bg:'#FF0000', accent:'#FFD700', effect:'flame' },
+  call:   { label:'ON-CALL', fg:'#FFFFFF', bg:'#1F3A8A', accent:'#60A5FA', effect:'sweep' },
+  normal: { label:'NORMAL',  fg:'#86EFAC', bg:'#052E16', accent:'#22C55E', effect:'sweep' },
+  lunch:  { label:'LUNCH',   fg:'#FED7AA', bg:'#7C2D12', accent:'#F97316', effect:'none'  },
+  home:   { label:'AT HOME', fg:'#DDD6FE', bg:'#2E1065', accent:'#A855F7', effect:'pulse' },
 };
 const S = {
   app:0, theme:'busy', conn:0, night:false,
@@ -395,10 +397,23 @@ function renderClock() {
 
 function renderTheme() {
   const t = THEMES[S.theme];
+  if (!t) return;
   // The panel is full colour now, so a theme finally shows its OWN colours.
   vclear(t.bg);
   vframe(2, 2, L.VD_W-4, L.VD_H-4, t.accent);
-  vtext(L.VD_W/2|0, 36, t.label, t.fg, 'small', 3, 4);
+
+  const maxW = (t.effect === 'flame' || t.effect === 'bars') ? 104 : (L.VD_W - 14);
+  const maxH = (t.effect === 'sweep' || t.effect === 'pulse') ? 54 : 64;
+  const n = t.label.length || 1;
+  const baseW = n * 6 - 1;
+  const baseH = 7;
+  const sx = (maxW / baseW) | 0;
+  const sy = (maxH / baseH) | 0;
+  let sc = Math.min(sx, sy);
+  if (sc < 1) sc = 1;
+  const cy = (t.effect === 'sweep' || t.effect === 'pulse') ? 35 : 40;
+
+  vtext(L.VD_W/2|0, cy, t.label, t.fg, 'small', sc, 4);
   // The effect stays a SHAPE as well as a colour: night mode collapses the
   // palette to one hue, and a theme that differed only in colour would be
   // indistinguishable from every other theme after dark.
@@ -443,19 +458,19 @@ function renderTheme() {
       const oBits = FLAME_O[frame][r];
       const yBits = FLAME_Y[frame][r];
       const wBits = FLAME_W[frame][r];
-      const y = 24 + r;
+      const y = 28 + r;
       for (let c = 0; c < 20; c++) {
         const shiftL = 19 - c;
-        if ((wBits >> shiftL) & 1)      vpix(18 + c, y, cW);
-        else if ((yBits >> shiftL) & 1) vpix(18 + c, y, cY);
-        else if ((oBits >> shiftL) & 1) vpix(18 + c, y, cO);
-        else if ((dBits >> shiftL) & 1) vpix(18 + c, y, cD);
+        if ((wBits >> shiftL) & 1)      vpix(8 + c, y, cW);
+        else if ((yBits >> shiftL) & 1) vpix(8 + c, y, cY);
+        else if ((oBits >> shiftL) & 1) vpix(8 + c, y, cO);
+        else if ((dBits >> shiftL) & 1) vpix(8 + c, y, cD);
 
         const shiftR = c;
-        if ((wBits >> shiftR) & 1)      vpix(122 + c, y, cW);
-        else if ((yBits >> shiftR) & 1) vpix(122 + c, y, cY);
-        else if ((oBits >> shiftR) & 1) vpix(122 + c, y, cO);
-        else if ((dBits >> shiftR) & 1) vpix(122 + c, y, cD);
+        if ((wBits >> shiftR) & 1)      vpix(132 + c, y, cW);
+        else if ((yBits >> shiftR) & 1) vpix(132 + c, y, cY);
+        else if ((oBits >> shiftR) & 1) vpix(132 + c, y, cO);
+        else if ((dBits >> shiftR) & 1) vpix(132 + c, y, cD);
       }
     }
   }

@@ -92,12 +92,13 @@ int textW(VFont f, const char *s, uint8_t scale) {
 }
 
 void text(int x, int y, const char *s, uint16_t c,
-          VFont f, uint8_t scale, VAlign align) {
+          VFont f, uint8_t scaleX, uint8_t scaleY, VAlign align) {
     if (!s || !*s) return;
-    if (!scale) scale = 1;
+    if (!scaleX) scaleX = 1;
+    if (!scaleY) scaleY = scaleX;
 
-    int tw = textW(f, s, scale);
-    int th = glyphH(f) * scale;
+    int tw = textW(f, s, scaleX);
+    int th = glyphH(f) * scaleY;
 
     switch (align % 3) {
         case 1: x -= tw / 2; break;
@@ -112,17 +113,22 @@ void text(int x, int y, const char *s, uint16_t c,
 
     int gw = glyphW(f), gh = glyphH(f);
     int pen = x;
-    for (const char *p = s; *p; p++, pen += advance(f) * scale) {
+    for (const char *p = s; *p; p++, pen += advance(f) * scaleX) {
         const uint8_t *g = glyph(f, *p);
         for (int col = 0; col < gw; col++) {
             uint8_t bits = g[col];
             for (int row = 0; row < gh; row++) {
                 if (!((bits >> row) & 1)) continue;
-                if (scale == 1) pixel(pen + col, y + row, c);
-                else            fillRect(pen + col * scale, y + row * scale, scale, scale, c);
+                if (scaleX == 1 && scaleY == 1) pixel(pen + col, y + row, c);
+                else                            fillRect(pen + col * scaleX, y + row * scaleY, scaleX, scaleY, c);
             }
         }
     }
+}
+
+void text(int x, int y, const char *s, uint16_t c,
+          VFont f, uint8_t scale, VAlign align) {
+    text(x, y, s, c, f, scale, scale, align);
 }
 
 void blit565(int x, int y, int w, int h, const uint16_t *src) {

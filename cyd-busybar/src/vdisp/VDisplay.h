@@ -41,6 +41,8 @@ int  textW(VFont f, const char *s, uint8_t scale);
 // x,y is the anchor; align says which corner of the text box sits on it.
 void text(int x, int y, const char *s, uint16_t c,
           VFont f, uint8_t scale, VAlign align);
+void text(int x, int y, const char *s, uint16_t c,
+          VFont f, uint8_t scaleX, uint8_t scaleY, VAlign align);
 
 // Raw RGB565 image data, row-major.
 void blit565(int x, int y, int w, int h, const uint16_t *src);
