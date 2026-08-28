@@ -2,8 +2,7 @@
 
 Firmware for the CYD 2.8" ESP32 (BUSY Bar clone). The buildable project is
 `cyd-busybar/`; the root holds the plan (`brief.md`) and the source design
-system (`DESIGN.md`, written for a different product on the same panel — it is
-the visual-system source, not this firmware's spec).
+system (`DESIGN.md` — the visual-system source, not this firmware's spec).
 
 ## Read first
 

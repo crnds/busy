@@ -9,11 +9,9 @@ The firmware speaks the original BUSY Bar's HTTP draw API, so anything that talk
 ```
 brief.md            The original plan: scope, architecture, out-of-scope list.
 DESIGN.md           The design system (tokens, type, spacing, components).
-                    Written for a *different* product — a Home Assistant
-                    controller on the same panel — and kept as the SOURCE
-                    for the visual system. Its functional constraints
-                    (devices, scenes, three-page structure) do not apply
-                    to this firmware.
+                    The SOURCE for the visual system; its functional
+                    constraints (devices, scenes, three-page structure)
+                    do not apply to this firmware.
 cyd-busybar/        The firmware (PlatformIO project).
   README.md         Device documentation: build/flash, first boot, Wi-Fi
                     flows, full API reference, simulator usage.
