@@ -6,20 +6,22 @@ draw API so tooling written for the real device mostly works against this one.
 
 ```
 ┌────────────────────────────────────────────┐
-│ ▟▙  Clock   Status   Settings        23:45 │  header,  32px
+│ ▟▙  Status           Settings        23:45 │  header,  32px
 ├────────────────────────────────────────────┤
 │                                            │
-│                 23:45                      │  panel,  160×80 → ×2
-│               WED 27 AUG                   │          full-bleed 320×160
-│                  :07                       │
+│                    BUSY                    │  panel,  160×80 → ×2
+│                                            │          full-bleed 320×160
+│                                            │
 │                                            │
 ├────────────────────────────────────────────┤
-│ [                  Clock                  ] │  strip,   48px
+│ [BUSY] [CALL] [NORMAL] [LUNCH] [HOME]      │  strip,   48px
 └────────────────────────────────────────────┘
 ```
 
-On the **Status** tab the strip becomes five tabs — `[BUSY][MEETING][DND]
-[CODING][LUNCH]` — so a theme is picked directly rather than stepped to.
+On the **Status** tab the strip becomes five theme tabs — `[BUSY] [CALL]
+[NORMAL] [LUNCH] [HOME]` — so a theme is picked directly rather than stepped
+to. When something else claims the panel it collapses to a single full-width
+chip naming the claimant — the owning application, or `Wi-Fi setup`.
 
 ## What it does
 
@@ -30,8 +32,9 @@ On the **Status** tab the strip becomes five tabs — `[BUSY][MEETING][DND]
   images, animations, countdowns and inline bitmaps — namespaced by
   application, arbitrated by priority, expiring on their own.
 - **A clock**, NTP-synced against a POSIX timezone string.
-- **Status themes** — BUSY, MEETING, DND, CODING, LUNCH — as label, colours
-  and a named procedural effect, so a theme is a few hundred bytes of JSON.
+- **Status themes** — BUSY, ON-CALL, NORMAL, LUNCH, AT HOME — as label,
+  colours and a named procedural effect, so a theme is a few hundred bytes of
+  JSON.
 - **A REST API** on the original's paths, plus a device-hosted web UI with a
   live panel preview.
 - **Auto-brightness** from the onboard LDR, and a red-only night mode at 1%
@@ -146,12 +149,12 @@ little-endian uint16.
 `320 × 240`, and every band tiles exactly:
 
 ```
-header   y   0.. 31    26 (Wi-Fi) + 3 × 81 (tabs) + 51 (clock) = 320
+header   y   0.. 31    26 (Wi-Fi) + 2 × 121 (tabs) + 52 (clock) = 320
 panel    y  32..191    160 × 80 at ×2 = 320 × 160, full-bleed
 strip    y 192..239    a chip, or five theme tabs on the Status tab
 ```
 
-The strip names what is on the panel — `Clock`, `Wi-Fi setup`, or the
+The strip names what is on the panel — `Status`, `Wi-Fi setup`, or the
 application that took it over — since a full-bleed raster leaves no side
 gutters for that. On the Status tab, with nothing else claiming the panel, it
 becomes a full-width row of theme tabs instead, so a theme is picked directly
@@ -171,4 +174,4 @@ node scripts/sim_check.js           # headless sweep
 python3 scripts/font_metrics.py --check
 ```
 
-Open `simulator.html` and drive it with `?app=2&night=1&conn=2&theme=dnd`.
+Open `simulator.html` and drive it with `?app=1&night=1&conn=2&theme=call`.

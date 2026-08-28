@@ -1,4 +1,4 @@
-# DESIGN.md — the cyd-ha design system
+# DESIGN.md — the design system
 
 The specification for how this firmware looks and behaves, and why. Read this
 before changing anything visual.
@@ -22,7 +22,7 @@ Arduino task on an ESP32. The constraints, and what each one forced:
 |---|---|
 | **320×240 total, 208px of body** | Four row bands of 52px. There is no room for a third type size or a fourth page. |
 | **RGB565, no alpha channel** | Every "translucent" fill is a precomputed blend against what is behind it (`lerp565`). This is why there are no shadows, no gradients and no glass: each would be a second read-modify-write of the panel for a purely decorative result. |
-| **Every HA call blocks `loop()`** | A timeout is a UI-freeze budget. Rendering must be cheap enough that it is never the bottleneck, which is what makes dirty-region rendering structural rather than an optimisation. |
+| **Every backend call blocks `loop()`** | A timeout is a UI-freeze budget. Rendering must be cheap enough that it is never the bottleneck, which is what makes dirty-region rendering structural rather than an optimisation. |
 | **Dirty-region rendering** | Components are driven by a single `vis` byte, not by underlying values — so two brightness values that map to the same highlight cost nothing to "change" between. Every visual state must be *comparable*. |
 | **Resistive touch, 4-point linear fit** | Targets are generous and rectangular. Accuracy degrades toward the bezel (`CAL_INSET` is 30, so y=0..31 is *extrapolated*), which is why the header is the one place we spend height on a target. |
 | **Three built-in bitmap faces, no bold, no in-between size** | Font 4 (18px caps), Font 2 (10px caps), GLCD (7px), and nothing between them. There is no bold at all, so hierarchy is carried by **colour tier alone** — not by weight, and not by more sizes. |
@@ -45,7 +45,7 @@ Seven, in priority order. When they conflict, the earlier one wins.
    fall out of sync, and no caption can describe something a tap won't send.
 4. **One tap acts, everywhere.** No drill-down, no confirmation, no mode. The
    optimistic-UI ordering (apply locally → repaint → fire the call → reconcile or
-   roll back) is what makes that feel instant against 1–2 s Zigbee round trips.
+   roll back) is what makes that feel instant against 1–2 s round trips.
 5. **Colour is information, not decoration.** `ACCENT` means *selected*.
    `SUCCESS`/`WARNING`/`ERROR` appear only when there is something to say. If
    everything is highlighted, nothing is — and by extension, **selecting nothing
@@ -82,10 +82,10 @@ without changing all of them. That is the problem this table fixes.
 | `C_ACCENT` | `#18BCF2` | 18 *(derived)* | Selected. The only saturated colour at rest |
 | `C_NEUTRAL` | `#7A828E` | 13 | Selected, but what it selected is **off** |
 | `C_SUCCESS` | `#2FD97C` | 10 | Online |
-| `C_WARNING` | `#F5A524` | 22 | Degraded (HA unreachable, Wi-Fi up) |
+| `C_WARNING` | `#F5A524` | 22 | Degraded (backend unreachable, Wi-Fi up) |
 | `C_ERROR` | `#FF4D6A` | 31 | Command failed / device offline |
-| `C_WARM` | `#FFB05C` | 14 | What 2202 K looks like |
-| `C_COOL` | `#A6CDFF` | 27 | What 4000 K looks like |
+| `C_WARM` | `#FFB05C` | 14 | The warm end of the colour-temperature axis |
+| `C_COOL` | `#A6CDFF` | 27 | The cool end of the colour-temperature axis |
 
 ### 3.1 `C_NEUTRAL`, and why "selected" is not one colour
 
@@ -121,9 +121,9 @@ appear as the same *kind* of mark.
 
 ### 3.2 Pinned background
 
-**`C_BG` is pinned to `0x0041` and must not move.** `src/ui/logo_ha.h` is
-generated and bakes that exact value as the splash mark's background, which is
-what lets the logo blit as an opaque rectangle with no transparency handling.
+**`C_BG` is pinned to `0x0041` and must not move.** The generated splash logo
+bakes that exact value as its background, which is what lets it blit as an
+opaque rectangle with no transparency handling.
 Change it and the boot splash grows a visible 96×96 box. Regenerate the logo
 first (see `CLAUDE.md`).
 
@@ -263,7 +263,7 @@ constant has the value it has, and because a future face could tighten them agai
 | `"23:45"` | `F_TITLE` | 44 | 35 | `STATUS_CLK_W` 51 with a 6px right margin — was 1px of slack, now 10 |
 | `"COOL"` | `F_BODY` | 51 | 31 | Set `ACM_W` to 60. Now fixed by the card's 288px tiling instead |
 | `"OFFLINE"` vs `"UNAVAILABLE"` | `F_BODY` | 75 / 122 | 51 / 82 | Chose the shorter word so a 14-char name is not truncated |
-| `"TRADFRI BULB 1"` | `F_TITLE` | 151 | 103 | Fits every default state with room; longer names truncate |
+| `"KITCHEN BULB 1"` | `F_TITLE` | 151 | 103 | Fits every default state with room; longer names truncate |
 | `"100%  4000K"` | `F_BODY` | 108 | 85 | The tightest bulb state: leaves 183px of 268 for the name |
 
 ---
@@ -317,8 +317,8 @@ the first is not thrift:
    RGB565 sprite would render in day colours over a red-only UI — the exact
    problem `themeMap()` exists to paper over for the one bitmap that *is* baked
    (the splash logo).
-2. **No generator.** `logo_ha.h` needs a browser in the loop to regenerate; an
-   icon that is nine `drawFastVLine` calls needs nothing.
+2. **No generator.** A generated logo header needs a browser in the loop to
+   regenerate; an icon that is nine `drawFastVLine` calls needs nothing.
 3. **Consistency by construction.** Every glyph is built on the same grid with the
    same stroke, so optical size and weight cannot drift.
 
@@ -336,7 +336,7 @@ chevrons).
 | `icoSun` / `icoMoon` / `icoClock` / `icoRotate` | The four settings, which are otherwise four identical rows of text and a toggle |
 | `icoWifi` | The entire connectivity readout, 0 or 3 bars |
 | `icoChevron` | Direction, in the setpoint stepper and the scroll gutter |
-| `icoBadge` | An overlay dot on another glyph — the HA-down badge |
+| `icoBadge` | An overlay dot on another glyph — the backend-down badge |
 
 `icoMoon` takes the colour **behind** it: a crescent is a disc minus a disc, and
 with no alpha the bite must be painted in the card's own fill.
@@ -398,7 +398,7 @@ Four decisions in that table:
   ~1.9:1 contrast; dark-on-cyan is ~9:1.
 - **`BV_PRESSED` is a full-brightness fill**, deliberately the loudest thing the
   UI ever draws, because it must land within `PRESS_FLASH_MS` (120 ms) and before
-  HA has answered. It is the only such fill in the system.
+  the backend has answered. It is the only such fill in the system.
 
 ### 8.2 The components
 
@@ -599,8 +599,8 @@ reaches any text.
 
 ### 11.1 Header (was: status bar)
 
-**Before.** 22px. `● WIFI ● HA` in 88px on the left, three ALL-CAPS tab labels in
-the 6×8 GLCD font, a clock on the right.
+**Before.** 22px. Two labelled status dots in 88px on the left, three ALL-CAPS
+tab labels in the 6×8 GLCD font, a clock on the right.
 
 **Problems.**
 - 88px — 27% of the bar's width — was permanent debug chrome telling a healthy
@@ -618,11 +618,11 @@ the 6×8 GLCD font, a clock on the right.
 | State | Rendering |
 |---|---|
 | Everything reachable | 3 bars in `C_TEXT3` — present, unobtrusive, reassuring |
-| HA not answering | 3 bars **plus an amber badge** |
+| Backend not answering | 3 bars **plus an amber badge** |
 | Wi-Fi down | **0 bars**, all in `C_ERROR` |
 
-Colour *and* a shape/badge change every time, never colour alone. The `HA` label's
-diagnostic value is not lost — it is in the serial log.
+Colour *and* a shape/badge change every time, never colour alone. The service
+name's diagnostic value is not lost — it is in the serial log.
 
 **The clock is exactly 5 characters, and that is a hard rule.** `"23:45"` is 44px
 in `F_TITLE` against the 45px its region leaves after a 6px margin, so anything
@@ -686,7 +686,7 @@ full row of controls. Two things it was doing had to go somewhere:
 
 - **An off-preset value.** The chips cover three levels, so a bulb set to 47% from
   the phone lights *no* chip — and this is not hypothetical, the live device
-  reported `on,76,2202` on the first boot after flashing. The icon still carries
+  reported a 76% level on the first boot after flashing. The icon still carries
   it (real colour temperature, blended by real brightness), but **the exact number
   is gone from the screen**: 47% and 55% now look the same, and neither lights a
   chip. That is the accepted cost, and it is the one thing to revisit first if the
@@ -703,7 +703,7 @@ The AC card keeps its line, and keeps the word.
 **Why the AC's state line shows the room, not the mode.** The chips select the mode
 and the icon shows it; repeating it would waste the line. What nothing else on the
 card can show is the room reading. A mode *outside* the three chips (heat,
-fan_only, auto — set from the HA app) **is** named there, because otherwise the
+fan-only, auto — set from another client) **is** named there, because otherwise the
 card would show no active chip and no explanation.
 
 **When the AC's line 1 does not fit, the NAME loses.** The state is short, live,
@@ -751,13 +751,13 @@ room to spare; every default scene name and the stress-test names clear the budg
 **The three pips are kept, refined, and remain derived.** Position = which bulb,
 ring = off, colour = warm/cool, fill intensity = level. Being read off `SCENE[]`
 itself they cannot describe a scene the tap won't send — which a hand-written
-caption could, and nearly did, reading `2200K` while `KELVIN_WARM` was corrected to
-the bulbs' real 2202 K limit.
+caption could, and nearly did, reading a stale kelvin value while the token had
+been corrected to the device's real limit.
 
 **The active scene is derived, never latched.** `sceneActive()` compares live state
 against the table every render, which is what makes overriding one bulb on the
-Devices page deselect the scene and a change from the HA app select the matching
-one, with no "current scene" variable to fall out of sync. An **unknown kelvin is
+Devices page deselect the scene and a change from another client select the
+matching one, with no "current scene" variable to fall out of sync. An **unknown kelvin is
 "cannot confirm", not "match"** — treating it as a match lights AWAKE and DAY
 simultaneously, since they differ only there, and two active tiles reads as a bug.
 
@@ -791,8 +791,8 @@ user has to remember.
 
 ### 11.5 Splash
 
-**Before.** The Home Assistant logo, centred, and nothing else — frozen for as
-long as `WIFI_CONNECT_MS` (20 s).
+**Before.** The product logo, centred, and nothing else — frozen for as long as
+`WIFI_CONNECT_MS` (20 s).
 
 **Problem.** A still logo for 20 seconds is indistinguishable from a hung board.
 "Is it working?" is the one question a boot screen has to answer.
@@ -832,14 +832,13 @@ control — that is the trade.
 place this table went backwards. Vertically nothing changed (the row band was
 always the target) and the drawn control grew from 26 to 40, so a chip is easier
 to *see* and easier to land on by eye — but 11px of horizontal slack is gone, and
-horizontal is the axis a resistive panel misses on. Worth re-checking with
-`pio run -e calib -t upload` if taps on the Devices page start feeling less
-reliable.
+horizontal is the axis a resistive panel misses on. Worth re-checking on hardware
+if taps on the Devices page start feeling less reliable.
 
 **Feedback ordering is fixed** (`doAction()`): apply the expected state locally →
 repaint → fire the blocking call → reconcile, or roll back from a saved copy and
-set `errMs`. IKEA Zigbee round trips run 1–2 s; without the optimistic step every
-tap would feel ignored. The 120 ms press flash covers the gap before even the
+set `errMs`. Round trips run 1–2 s; without the optimistic step every tap would
+feel ignored. The 120 ms press flash covers the gap before even the
 optimistic repaint is visible.
 
 **The press flash is keyed by kind as well as index**, or a scene tap at index 2
@@ -900,7 +899,7 @@ with a 235,188 B minimum, flat across a reboot and sustained running.
 
 The brief's component list included several things this firmware has no use for.
 Adding them would contradict both "every element serves a purpose" and this
-repo's standing rule against becoming a general HA dashboard:
+repo's standing rule against becoming a general dashboard:
 
 - **Dialogs and menus.** Every action here is one tap and immediately reversible.
   A confirmation step would make the product worse, and a menu implies navigation
@@ -969,7 +968,7 @@ load-bearing rather than conveniences:
    compiler cannot see — that a card's line-1 descenders stop before the control
    row, that its dirty rect covers those descenders, and that the line's ink does
    not start above that rect — plus the night ladder.
-3. **State is deep-linkable**: `?page=1&night=1&scenes=100&stale=1&ha=0&mode=heat`.
+3. **State is deep-linkable**: `?page=1&night=1&scenes=100&stale=1&backend=0&mode=heat`.
 
 A headless sweep (`eval` the `<script>` against a Proxy-stubbed canvas, then drive
 `page`/`set`/`dev`/`sceneStress()` and read `log.innerHTML`) covers all three pages
@@ -980,9 +979,9 @@ works.
 
 **Confirmed on hardware** after flashing: settings load before `screenBegin()` (no
 100% backlight flash), Wi-Fi reconnect, NTP sync at exactly UTC+7
-(`local 22:17:13 / utc 15:17:13`), first HA poll succeeded, heap flat, touch noise
-floor z = 53–65 against a 400 threshold, and tab taps at y = 8–10 landing in the
-correct cells.
+(`local 22:17:13 / utc 15:17:13`), first backend poll succeeded, heap flat, touch
+noise floor z = 53–65 against a 400 threshold, and tab taps at y = 8–10 landing in
+the correct cells.
 
 **Not verified, and worth a look on the panel:** whether Font 2's 10px caps are
 big enough at arm's length for the device names and the settings captions — this
