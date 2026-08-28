@@ -26,11 +26,11 @@ pio device monitor      # 115200
 UI work without hardware — the browser simulator mirrors `config.h`:
 
 ```sh
-python3 simulator/gen_sim_fonts.py   # regenerate sim fonts if Font 2/GLCD change
-python3 simulator/gen_vfont.py       # regenerate the panel's 3x5/5x7 vfont
-python3 simulator/build_sim.py       # build simulator.html
-node simulator/sim_check.js          # headless sweep; non-zero exit on failure
-python3 simulator/font_metrics.py --check
+python3 scripts/gen_sim_fonts.py     # regenerate sim fonts if Font 2/GLCD change
+python3 scripts/gen_vfont.py         # regenerate the panel's 3x5/5x7 vfont
+python3 scripts/build_sim.py         # build simulator.html
+node scripts/sim_check.js            # headless sweep; non-zero exit on failure
+python3 scripts/font_metrics.py --check
 ```
 
 There is no C++ test suite. Verification is: it compiles, `sim_check.js`
